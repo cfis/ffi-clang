@@ -49,9 +49,12 @@ module FFI
 			end
 			
 			# Read the text from the source file for this range.
-			# @returns [String] The source text.
+			# @returns [String | Nil] The source text, or nil if the range is invalid or has no file.
 			def text
-				::File.open(self.start.file, "r") do |file|
+				file_path = self.start.file
+				return nil if file_path.nil?
+				
+				::File.open(file_path, "r") do |file|
 					file.seek(self.start.offset)
 					return file.read(self.bytesize)
 				end
