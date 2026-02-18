@@ -21,7 +21,7 @@ module ClangSpecHelper
 	end
 	
 	def find_all_by_kind(cursor, kind)
-		cursor.find_by_kind(true, kind)
+		cursor.find_by_kind(true, kind).to_a
 	end
 	
 	def find_by_kind(cursor, kind)
