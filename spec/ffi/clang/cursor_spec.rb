@@ -1069,3 +1069,51 @@ describe Cursor do
 		end
 	end
 end
+
+describe FFI::Clang::Cursor do
+	let(:translation_unit) {Index.new.parse_translation_unit(fixture_path("class.cpp"))}
+	let(:cursor) {translation_unit.cursor}
+	
+	describe "#find_first_by_kind" do
+		it "finds the first class declaration" do
+			result = cursor.find_first_by_kind(true, :cursor_class_decl)
+			expect(result).not_to be_nil
+			expect(result.kind).to eq(:cursor_class_decl)
+			expect(result.spelling).to eq("MyClass1")
+		end
+		
+		it "returns nil when no match is found" do
+			result = cursor.find_first_by_kind(true, :cursor_objc_interface_decl)
+			expect(result).to be_nil
+		end
+		
+		it "finds with multiple kinds" do
+			result = cursor.find_first_by_kind(true, :cursor_struct, :cursor_class_decl)
+			expect(result).not_to be_nil
+			expect(result.kind).to eq(:cursor_class_decl)
+		end
+		
+		it "respects recurse parameter" do
+			result = cursor.find_first_by_kind(false, :cursor_constructor)
+			expect(result).to be_nil
+			
+			result = cursor.find_first_by_kind(true, :cursor_constructor)
+			expect(result).not_to be_nil
+		end
+		
+		it "raises on invalid recurse parameter" do
+			expect {cursor.find_first_by_kind("yes", :cursor_class_decl)}.to raise_error(RuntimeError)
+		end
+	end
+	
+	describe "#each with :break" do
+		it "stops traversal when block returns :break" do
+			count = 0
+			cursor.each(true) do |child, parent|
+				count += 1
+				:break if child.kind == :cursor_class_decl
+			end
+			expect(count).to eq(1)
+		end
+	end
+end
