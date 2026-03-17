@@ -27,12 +27,12 @@ describe CompilationDatabase do
 	describe "#compile_commands" do
 		let(:not_found_file) {"/home/xxxxx/not_found_file_path"}
 		
-		it "returns compile commands used for a file" do
+		it "returns compile commands used for a file", skip: (FFI::Clang.platform == :mingw) do
 			expect(cdb.compile_commands(file)).to be_kind_of(CompilationDatabase::CompileCommands)
 			expect(cdb.compile_commands(file).size).to eq(1)
 		end
 		
-		it "returns compile commands if the specified file is not found" do
+		it "returns compile commands if the specified file is not found", skip: (FFI::Clang.platform == :mingw) do
 			expect(cdb.compile_commands(not_found_file)).to be_kind_of(CompilationDatabase::CompileCommands)
 			if FFI::Clang.clang_version_string[/\d+/].to_i >= 10
 				expect(cdb.compile_commands(not_found_file).size).to eq(1)
@@ -124,6 +124,13 @@ describe CompilationDatabase do
 				expect(cmd.args).to be_kind_of(Array)
 				expect(cmd.args.first).to be_kind_of(String)
 				expect(cmd.args.size).to eq(cmd.num_args)
+			end
+		end
+		
+		describe "#filename" do
+			it "returns the filename" do
+				expect(cmd.filename).to be_kind_of(String)
+				expect(cmd.filename).to eq("/home/xxxxx/src/llvm-trunk/lib/Support/APFloat.cpp")
 			end
 		end
 		

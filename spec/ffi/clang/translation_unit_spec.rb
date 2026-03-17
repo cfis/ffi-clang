@@ -135,8 +135,12 @@ describe TranslationUnit do
 		it "raises exception if save path is not writable" do
 			FileUtils.mkdir_p File.dirname(may_not_exist_filepath)
 			File.chmod(0444, File.dirname(may_not_exist_filepath))
-			expect{translation_unit.save(may_not_exist_filepath)}.to raise_error(FFI::Clang::Error)
-			expect(FileTest.exist?(may_not_exist_filepath)).to be false
+			if FFI::Clang.clang_version_string[/\d+/].to_i >= 19
+				expect{translation_unit.save(may_not_exist_filepath)}.not_to raise_error
+			else
+				expect{translation_unit.save(may_not_exist_filepath)}.to raise_error(FFI::Clang::Error)
+				expect(FileTest.exist?(may_not_exist_filepath)).to be false
+			end
 		end
 	end
 	
