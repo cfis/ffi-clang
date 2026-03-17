@@ -18,7 +18,7 @@ module FFI
 			
 			# CompilationDatabase
 			attach_function :compilation_database_from_directory, :clang_CompilationDatabase_fromDirectory, [:string, :pointer], :CXCompilationDatabase
-			attach_function :compilation_database_dispose, :clang_CompilationDatabase_dispose, [:CXCompilationDatabase], :uint
+			attach_function :compilation_database_dispose, :clang_CompilationDatabase_dispose, [:CXCompilationDatabase], :void
 			attach_function :compilation_database_get_compile_commands, :clang_CompilationDatabase_getCompileCommands, [:CXCompilationDatabase, :string], :CXCompileCommands
 			attach_function :compilation_database_get_all_compile_commands, :clang_CompilationDatabase_getAllCompileCommands, [:CXCompilationDatabase], :CXCompileCommands
 			
@@ -29,13 +29,12 @@ module FFI
 			
 			# CompilationDatabase::CompileCommand
 			attach_function :compile_command_get_directory, :clang_CompileCommand_getDirectory, [:CXCompileCommand], CXString.by_value
+			attach_function :compile_command_get_filename, :clang_CompileCommand_getFilename, [:CXCompileCommand], CXString.by_value
 			attach_function :compile_command_get_num_args, :clang_CompileCommand_getNumArgs, [:CXCompileCommand], :uint
 			attach_function :compile_command_get_arg, :clang_CompileCommand_getArg, [:CXCompileCommand, :uint], CXString.by_value
-			
-			# Thease functions are not exposed by libclang.so privided by packages.
-			# attach_function :compile_command_get_num_mapped_sources, :clang_CompileCommand_getNumMappedSources, [:CXCompileCommand], :uint
-			# attach_function :compile_command_get_mapped_source_path, :clang_CompileCommand_getMappedSourcePath, [:CXCompileCommand, :uint], CXString.by_value
-			# attach_function :compile_command_get_mapped_source_content, :clang_CompileCommand_getMappedSourceContent, [:CXCompileCommand, :uint], CXString.by_value
+			attach_function :compile_command_get_num_mapped_sources, :clang_CompileCommand_getNumMappedSources, [:CXCompileCommand], :uint
+			attach_function :compile_command_get_mapped_source_path, :clang_CompileCommand_getMappedSourcePath, [:CXCompileCommand, :uint], CXString.by_value
+			attach_function :compile_command_get_mapped_source_content, :clang_CompileCommand_getMappedSourceContent, [:CXCompileCommand, :uint], CXString.by_value
 		end
 	end
 end

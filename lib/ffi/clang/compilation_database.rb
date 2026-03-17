@@ -106,6 +106,12 @@ module FFI
 					Lib.extract_string Lib.compile_command_get_directory(@pointer)
 				end
 				
+				# Get the filename associated with the command.
+				# @returns [String] The filename.
+				def filename
+					Lib.extract_string Lib.compile_command_get_filename(@pointer)
+				end
+				
 				# Get the number of arguments.
 				# @returns [Integer] The number of arguments.
 				def num_args
@@ -127,33 +133,26 @@ module FFI
 				
 				# Get the number of mapped sources.
 				# @returns [Integer] The number of mapped sources.
-				# @raises [NotImplementedError] This method is not yet implemented.
 				def num_mapped_sources
-					raise NotImplementedError
-					# Lib.compile_command_get_num_mapped_sources(@pointer)
+					Lib.compile_command_get_num_mapped_sources(@pointer)
 				end
 				
 				# Get a mapped source path by index.
 				# @parameter i [Integer] The source index.
 				# @returns [String] The mapped source path.
-				# @raises [NotImplementedError] This method is not yet implemented.
 				def mapped_source_path(i)
-					raise NotImplementedError
-					# Lib.extract_string Lib.compile_command_get_mapped_source_path(@pointer, i)
+					Lib.extract_string Lib.compile_command_get_mapped_source_path(@pointer, i)
 				end
 				
 				# Get mapped source content by index.
 				# @parameter i [Integer] The source index.
 				# @returns [String] The mapped source content.
-				# @raises [NotImplementedError] This method is not yet implemented.
 				def mapped_source_content(i)
-					raise NotImplementedError
-					# Lib.extract_string Lib.compile_command_get_mapped_source_content(@pointer, i)
+					Lib.extract_string Lib.compile_command_get_mapped_source_content(@pointer, i)
 				end
 				
 				# Get all mapped sources.
 				# @returns [Array(Hash)] Array of hashes with `:path` and `:content` keys.
-				# @raises [NotImplementedError] This method is not yet implemented.
 				def mapped_sources
 					num_mapped_sources.times.map {|i|
 						{path: mapped_source_path(i), content: mapped_source_content(i)}

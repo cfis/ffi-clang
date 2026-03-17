@@ -50,7 +50,7 @@ describe CompilationDatabase do
 	end
 	
 	describe CompilationDatabase::CompileCommands do
-		let(:commands) {cdb.compile_commands(file)}
+		let(:commands) {cdb.all_compile_commands}
 		
 		it "calls compile_commands_dispose on GC" do
 			commands.autorelease = false
@@ -61,11 +61,7 @@ describe CompilationDatabase do
 		describe "#size" do
 			it "returns the number of CompileCommand" do
 				expect(commands.size).to be_kind_of(Integer)
-				expect(commands.size).to eq(1)
-			end
-			
-			it "returns the number of CompileCommand" do
-				expect(cdb.all_compile_commands.size).to eq(3)
+				expect(commands.size).to eq(3)
 			end
 		end
 		
@@ -93,12 +89,19 @@ describe CompilationDatabase do
 	end
 	
 	describe CompilationDatabase::CompileCommand do
-		let(:cmd) {cdb.compile_commands(file).first}
+		let(:cmd) {cdb.all_compile_commands.command(0)}
 		
 		describe "#directory" do
 			it "returns the working directory" do
 				expect(cmd.directory).to be_kind_of(String)
 				expect(cmd.directory).to eq("/home/xxxxx/src/build-trunk/lib/Support")
+			end
+		end
+		
+		describe "#filename" do
+			it "returns the filename" do
+				expect(cmd.filename).to be_kind_of(String)
+				expect(cmd.filename).to eq("/home/xxxxx/src/llvm-trunk/lib/Support/APFloat.cpp")
 			end
 		end
 		
@@ -125,42 +128,28 @@ describe CompilationDatabase do
 		end
 		
 		describe "#num_mapped_sources" do
-			# TODO: a case which has mapped sources
-			
 			it "returns the number of source mappings" do
-				# expect(cmd.num_mapped_sources).to be_kind_of(Integer)
-				# expect(cmd.num_mapped_sources).to eq(0)
+				expect(cmd.num_mapped_sources).to be_kind_of(Integer)
+				expect(cmd.num_mapped_sources).to eq(0)
 			end
 		end
 		
 		describe "#mapped_source_path" do
-			it "returns the I'th mapped source path" do
-				# TODO: a case which returns real source path
-				# expect(cmd.mapped_source_path(0)).to be_kind_of(String)
-			end
-			
 			it "returns nil if the index exceeds element size" do
-				# expect(cmd.mapped_source_path(1000)).to be_nil
+				expect(cmd.mapped_source_path(1000)).to be_nil
 			end
 		end
 		
 		describe "#mapped_source_content" do
-			it "returns the I'th mapped source content" do
-				# TODO: a case which returns real source path
-				# expect(cmd.mapped_source_content(0)).to be_kind_of(String)
-			end
-			
 			it "returns nil if the index exceeds element size" do
-				# expect(cmd.mapped_source_content(1000)).to be_nil
+				expect(cmd.mapped_source_content(1000)).to be_nil
 			end
 		end
 		
 		describe "#mapped_sources" do
-			# TODO: a case which has mapped sources
-			
 			it "returns all mapped sources as Array" do
-				# expect(cmd.mapped_sources).to be_kind_of(Array)
-				# expect(cmd.mapped_sources.size).to eq(cmd.num_mapped_sources)
+				expect(cmd.mapped_sources).to be_kind_of(Array)
+				expect(cmd.mapped_sources.size).to eq(cmd.num_mapped_sources)
 			end
 		end
 	end
