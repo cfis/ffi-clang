@@ -22,19 +22,24 @@ Or install it yourself as:
 
 Please see the [project documentation](https://ioquatix.github.io/ffi-clang/) for more details.
 
-### Library Version
+### Configuration
 
-Due to issues figuring out which library to use, we require you to manually specify it. For example, to run the tests, with MacPorts llvm/clang 3.4, use the following:
+The following environment variables can be used to configure how ffi-clang finds libclang and its resources:
 
-    LLVM_CONFIG=llvm-config-mp-3.4 rake
+| Variable | Description |
+|---|---|
+| `LLVM_CONFIG` | Path to the `llvm-config` binary. Used to locate the libclang shared library and clang binary. |
+| `LLVM_VERSION` | Target LLVM version (e.g., `3.4`). When set, disables auto-detection of `llvm-config`. |
+| `LIBCLANG` | Direct path to the libclang shared library (e.g., `/usr/lib/libclang.so`). Overrides `llvm-config` based library discovery. |
+| `LIBCLANG_RESOURCE_DIR` | Path to the clang resource directory containing compiler-intrinsic headers (`stddef.h`, `stdarg.h`, etc.). Use this if libclang cannot find its own headers. |
+
+For example, to use a specific LLVM installation:
+
+    LLVM_CONFIG=llvm-config-mp-3.4 bundle exec bake test
 
 ## Releases
 
 Please see the [project releases](https://ioquatix.github.io/ffi-clang/releases/index) for all releases.
-
-### v0.14.0
-
-  - Helper method that returns a curors's <code class="language-ruby">FFI::Clang::Cursor\#qualified\_display\_name</code>.
 
 ## Contributing
 

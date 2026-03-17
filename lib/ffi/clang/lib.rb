@@ -21,6 +21,7 @@ require "mkmf"
 
 require_relative "platform"
 require_relative "error"
+require_relative "clang_resource"
 
 module FFI
 	module Clang
@@ -28,12 +29,20 @@ module FFI
 		module Lib
 			extend FFI::Library
 			
-			# Use LLVM_CONFIG if it was explicitly specified:
-			llvm_config = ENV["LLVM_CONFIG"]
-			
-			# If we aren't building for a specific version (e.g. travis) try to find llvm-config
-			unless ENV["LLVM_VERSION"] 
-				llvm_config ||= MakeMakefile.find_executable("llvm-config")
+			# Find the path to llvm-config.
+			# @returns [String | Nil] The path to llvm-config, or nil if not found.
+			def self.llvm_config
+				return @llvm_config if defined?(@llvm_config)
+				
+				# Use LLVM_CONFIG if it was explicitly specified:
+				@llvm_config = ENV["LLVM_CONFIG"]
+				
+				# If we aren't building for a specific version (e.g. travis) try to find llvm-config
+				unless @llvm_config || ENV["LLVM_VERSION"]
+					@llvm_config = MakeMakefile.find_executable("llvm-config")
+				end
+				
+				@llvm_config
 			end
 			
 			libs = []
@@ -73,6 +82,18 @@ module FFI
 			libs << "clang"
 			
 			ffi_lib libs
+			
+			# Detect the clang resource directory:
+			@resource = ClangResource.new(
+				libclang_path: ffi_libraries.first&.name,
+				llvm_config: llvm_config
+			)
+			
+			# The clang resource directory locator.
+			# @returns [ClangResource] The resource directory instance.
+			def self.resource
+				@resource
+			end
 			
 			# Convert an options hash to a bitmask for libclang enums.
 			# @parameter enum [FFI::Enum] The enum type.
