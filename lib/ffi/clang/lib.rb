@@ -17,11 +17,14 @@
 # Copyright, 2024, by msepga.
 
 require "ffi"
-require "mkmf"
 
-require_relative "platform"
 require_relative "error"
-require_relative "clang_resource"
+require_relative "platform"
+require_relative "args/args"
+require_relative "args/linux"
+require_relative "args/darwin"
+require_relative "args/mingw"
+require_relative "args/mswin"
 
 module FFI
 	module Clang
@@ -29,78 +32,16 @@ module FFI
 		module Lib
 			extend FFI::Library
 			
-			# Find the path to llvm-config.
-			# @returns [String | Nil] The path to llvm-config, or nil if not found.
-			def self.llvm_config
-				return @llvm_config if defined?(@llvm_config)
-				
-				# Use LLVM_CONFIG if it was explicitly specified:
-				@llvm_config = ENV["LLVM_CONFIG"]
-				
-				# If we aren't building for a specific version (e.g. travis) try to find llvm-config
-				unless @llvm_config || ENV["LLVM_VERSION"]
-					@llvm_config = MakeMakefile.find_executable("llvm-config")
-				end
-				
-				@llvm_config
-			end
+			@args = Args.create
 			
-			libs = []
+			ffi_lib @args.libclang_paths
 			
-			platform = FFI::Clang.platform
+			@args.libclang_loaded_path = ffi_libraries.first&.name
 			
-			if ENV["LIBCLANG"]
-				libs << ENV["LIBCLANG"]
-			elsif llvm_config
-				llvm_library_dir = `#{llvm_config} --libdir`.chomp
-				
-				case platform
-				when :darwin
-					libs << llvm_library_dir + "/libclang.dylib"
-				when :mingw, :mswin
-					llvm_bin_dir = `#{llvm_config} --bindir`.chomp
-					libs << llvm_bin_dir + "/libclang.dll"
-				else
-					libs << llvm_library_dir + "/libclang.so"
-				end
-			else
-				case platform
-				when :darwin
-					begin
-						xcode_dir = `xcode-select -p`.chomp
-						%W[
-							#{xcode_dir}/Toolchains/XcodeDefault.xctoolchain/usr/lib/libclang.dylib
-							#{xcode_dir}/usr/lib/libclang.dylib
-						].each do |f|
-							if File.exist? f
-								libs << f
-								break
-							end
-						end
-					rescue Errno::ENOENT
-						# Ignore
-					end
-				when :mingw
-					libs << "libclang.dll"
-				when :mswin
-					libs << "clang.dll"
-				else
-					libs << "clang"
-				end
-			end
-			
-			ffi_lib libs
-			
-			# Detect the clang resource directory:
-			@resource = ClangResource.new(
-				libclang_path: ffi_libraries.first&.name,
-				llvm_config: llvm_config
-			)
-			
-			# The clang resource directory locator.
-			# @returns [ClangResource] The resource directory instance.
-			def self.resource
-				@resource
+			# The platform-specific clang configuration.
+			# @returns [Args] The args instance.
+			def self.args
+				@args
 			end
 			
 			# Convert an options hash to a bitmask for libclang enums.
