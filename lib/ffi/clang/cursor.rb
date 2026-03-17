@@ -431,6 +431,7 @@ module FFI
 			# 	@parameter cursor [Cursor] The child cursor.
 			# 	@parameter parent [Cursor] The parent cursor.
 			# @returns [Enumerator] If no block is given.
+			# The block may return :break, :continue, or :recurse to control traversal.
 			def each(recurse = true, &block)
 				return to_enum(:each, recurse) unless block_given?
 				
@@ -439,6 +440,8 @@ module FFI
 					# modify the recursion on a case by case basis if needed
 					result = block.call Cursor.new(cxcursor, @translation_unit), Cursor.new(parent_cursor, @translation_unit)
 					case result
+					when :break
+						:break
 					when :continue
 						:continue
 					when :recurse
@@ -493,6 +496,30 @@ module FFI
 				self.each(recurse) do |child, parent|
 					yield child if kinds_set.include?(child.kind)
 				end
+			end
+			
+			# Find the first child cursor matching any of the given kinds.
+			# Short-circuits on first match via :break to terminate traversal early.
+			# @parameter recurse [Boolean | Nil] Whether to recurse into children.
+			# @parameter kinds [Array(Symbol)] The cursor kinds to search for.
+			# @returns [Cursor | Nil] The first matching cursor, or nil if not found.
+			# @raises [RuntimeError] If recurse parameter is not nil or boolean.
+			def find_first_by_kind(recurse, *kinds)
+				unless (recurse == nil || recurse == true || recurse == false)
+					raise("Recurse parameter must be nil or a boolean value. Value was: #{recurse}")
+				end
+				
+				result = nil
+				kinds_set = kinds.to_set
+				
+				self.each(recurse) do |child, parent|
+					if kinds_set.include?(child.kind)
+						result = child
+						next :break
+					end
+				end
+				
+				result
 			end
 			
 			# Find all references to this cursor in a file.
