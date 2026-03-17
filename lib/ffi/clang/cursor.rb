@@ -13,6 +13,7 @@
 # Copyright, 2022, by Motonori Iwamuro.
 # Copyright, 2023-2025, by Charlie Savage.
 
+require "set"
 require_relative "lib/cursor"
 require_relative "lib/code_completion"
 
@@ -477,20 +478,21 @@ module FFI
 			# Find child cursors by kind.
 			# @parameter recurse [Boolean | Nil] Whether to recurse into children.
 			# @parameter kinds [Array(Symbol)] The cursor kinds to search for.
-			# @returns [Array(Cursor)] Array of matching cursors.
+			# @yields {|cursor| ...} Each matching cursor if a block is given.
+			# @returns [Enumerator] If no block is given.
 			# @raises [RuntimeError] If recurse parameter is not nil or boolean.
-			def find_by_kind(recurse, *kinds)
+			def find_by_kind(recurse, *kinds, &block)
 				unless (recurse == nil || recurse == true || recurse == false)
 					raise("Recurse parameter must be nil or a boolean value. Value was: #{recurse}")
 				end
 				
-				result = Array.new
+				return enum_for(__method__, recurse, *kinds) unless block_given?
+				
+				kinds_set = kinds.to_set
+				
 				self.each(recurse) do |child, parent|
-					if kinds.include?(child.kind)
-						result << child
-					end
+					yield child if kinds_set.include?(child.kind)
 				end
-				result
 			end
 			
 			# Find all references to this cursor in a file.
