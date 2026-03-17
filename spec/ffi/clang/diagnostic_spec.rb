@@ -91,7 +91,12 @@ describe Diagnostic do
 	context "#category_id" do
 		it "returns the category number" do
 			expect(diagnostic.category_id).to be_kind_of(Integer)
-			expect(diagnostic.category_id).to eq(2)
+			expect(diagnostic.category).to eq("Semantic Issue")
+			if FFI::Clang.clang_version_string[/\d+/].to_i >= 19
+				expect(diagnostic.category_id).to eq(3)
+			else
+				expect(diagnostic.category_id).to eq(2)
+			end
 		end
 	end
 end

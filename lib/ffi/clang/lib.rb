@@ -47,39 +47,47 @@ module FFI
 			
 			libs = []
 			
+			platform = FFI::Clang.platform
+			
 			if ENV["LIBCLANG"]
 				libs << ENV["LIBCLANG"]
 			elsif llvm_config
 				llvm_library_dir = `#{llvm_config} --libdir`.chomp
-				platform = FFI::Clang.platform
 				
 				case platform
 				when :darwin
 					libs << llvm_library_dir + "/libclang.dylib"
-				when :windows
+				when :mingw, :mswin
 					llvm_bin_dir = `#{llvm_config} --bindir`.chomp
 					libs << llvm_bin_dir + "/libclang.dll"
 				else
 					libs << llvm_library_dir + "/libclang.so"
 				end
-			end
-			
-			begin
-				xcode_dir = `xcode-select -p`.chomp
-				%W[
-					#{xcode_dir}/Toolchains/XcodeDefault.xctoolchain/usr/lib/libclang.dylib
-					#{xcode_dir}/usr/lib/libclang.dylib
-				].each do |f|
-					if File.exist? f
-						libs << f
-						break
+			else
+				case platform
+				when :darwin
+					begin
+						xcode_dir = `xcode-select -p`.chomp
+						%W[
+							#{xcode_dir}/Toolchains/XcodeDefault.xctoolchain/usr/lib/libclang.dylib
+							#{xcode_dir}/usr/lib/libclang.dylib
+						].each do |f|
+							if File.exist? f
+								libs << f
+								break
+							end
+						end
+					rescue Errno::ENOENT
+						# Ignore
 					end
+				when :mingw
+					libs << "libclang.dll"
+				when :mswin
+					libs << "clang.dll"
+				else
+					libs << "clang"
 				end
-			rescue Errno::ENOENT
-				# Ignore
 			end
-			
-			libs << "clang"
 			
 			ffi_lib libs
 			
