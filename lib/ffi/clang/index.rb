@@ -39,6 +39,10 @@ module FFI
 			# @raises [Error] If parsing fails.
 			def parse_translation_unit(source_file, command_line_args = nil, unsaved = [], opts = {})
 				command_line_args = Array(command_line_args)
+				
+				# Inject -resource-dir if libclang can't find it on its own:
+				command_line_args = command_line_args + Lib.resource.command_line_args(command_line_args)
+				
 				unsaved_files = UnsavedFile.unsaved_pointer_from(unsaved)
 				
 				translation_unit_pointer_out = FFI::MemoryPointer.new(:pointer)
