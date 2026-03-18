@@ -70,6 +70,13 @@ module FFI
 				end
 			end
 			
+			# Called after ffi_lib successfully loads libclang.
+			# Subclasses may override to perform post-load setup.
+			#
+			# @parameter library [FFI::DynamicLibrary] The loaded libclang library.
+			def post_load(library)
+			end
+			
 			private
 			
 			# Platform-specific extra args beyond -resource-dir.
