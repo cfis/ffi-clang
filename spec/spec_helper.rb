@@ -29,7 +29,7 @@ module ClangSpecHelper
 	end
 	
 	def find_matching(cursor, &term)
-		child, parent = cursor.find(&term)
+		child, _ = cursor.find(&term)
 		child
 	end
 end
