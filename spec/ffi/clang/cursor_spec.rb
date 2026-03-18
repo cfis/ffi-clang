@@ -1072,6 +1072,19 @@ describe Cursor do
 			expect(myfloat_typedef.qualified_name).to eq("ns::myfloat")
 		end
 	end
+
+	describe "#comment_range" do
+		let(:func) do
+			find_matching(cursor_pp) do |child, parent|
+				child.kind == :cursor_function and child.spelling == "a_function"
+			end
+		end
+
+		it "returns a source range" do
+			range = func.comment_range
+			expect(range).to be_kind_of(SourceRange)
+		end
+	end
 end
 
 describe FFI::Clang::Cursor do
@@ -1118,6 +1131,248 @@ describe FFI::Clang::Cursor do
 				:break if child.kind == :cursor_class_decl
 			end
 			expect(count).to eq(1)
+		end
+	end
+
+	describe "#each with :continue" do
+		it "continues traversal without recursing when block returns :continue" do
+			top_level_count = 0
+			cursor.each(true) do |child, parent|
+				top_level_count += 1
+				:continue
+			end
+			# Should only visit top-level children, not recurse
+			expect(top_level_count).to be > 0
+			expect(top_level_count).to be < 20
+		end
+	end
+end
+
+describe FFI::Clang::Cursor do
+	let(:cursor_types) {Index.new.parse_translation_unit(fixture_path("types.cxx")).cursor}
+	let(:cursor_cxx) {Index.new.parse_translation_unit(fixture_path("test.cxx")).cursor}
+	let(:cursor_class) {Index.new.parse_translation_unit(fixture_path("class.cpp")).cursor}
+
+	describe "#comment_range" do
+		let(:cursor_pp) {Index.new.parse_translation_unit(fixture_path("docs.c"),[],[],[:detailed_preprocessing_record]).cursor}
+
+		let(:func) do
+			find_matching(cursor_pp) do |child, parent|
+				child.kind == :cursor_function and child.spelling == "a_function"
+			end
+		end
+
+		it "returns a source range for the comment" do
+			range = func.comment_range
+			expect(range).to be_kind_of(SourceRange)
+		end
+	end
+
+	describe "#completion" do
+		let(:func) do
+			find_matching(cursor_cxx) do |child, parent|
+				child.kind == :cursor_function and child.spelling == "f_non_variadic"
+			end
+		end
+
+		it "returns a code completion string" do
+			completion = func.completion
+			expect(completion).to be_kind_of(CodeCompletion::String)
+		end
+	end
+
+	describe "#anonymous_record_declaration?" do
+		let(:cursor_anonymous) {Index.new.parse_translation_unit(fixture_path("anonymous.h")).cursor}
+
+		let(:anon_struct) do
+			find_matching(cursor_anonymous) do |child, parent|
+				child.kind == :cursor_struct and child.anonymous?
+			end
+		end
+
+		it "checks if the cursor is an anonymous record declaration" do
+			expect(anon_struct.anonymous_record_declaration?).to eq(true).or eq(false)
+		end
+	end
+
+	describe "#num_args" do
+		let(:func) do
+			find_matching(cursor_cxx) do |child, parent|
+				child.kind == :cursor_function and child.spelling == "f_non_variadic"
+			end
+		end
+
+		it "returns the number of arguments for a function cursor" do
+			expect(func.num_args).to be_kind_of(Integer)
+			expect(func.num_args).to eq(3)
+		end
+	end
+
+	describe "#objc_type_encoding" do
+		let(:func) do
+			find_matching(cursor_cxx) do |child, parent|
+				child.kind == :cursor_function and child.spelling == "f_non_variadic"
+			end
+		end
+
+		it "returns a string" do
+			expect(func.objc_type_encoding).to be_kind_of(String)
+		end
+	end
+
+	describe "#deleted?" do
+		let(:deleted_ctor) do
+			find_matching(cursor_types) do |child, parent|
+				child.kind == :cursor_constructor and child.spelling == "DeletedCopy" and
+							parent.spelling == "DeletedCopy" and
+							child.copy_constructor?
+			end
+		end
+
+		it "returns true for a deleted function" do
+			expect(deleted_ctor.deleted?).to be true
+		end
+	end
+
+	describe "#copy_assignment_operator?" do
+		let(:copy_assign) do
+			find_matching(cursor_types) do |child, parent|
+				child.kind == :cursor_cxx_method and child.spelling == "operator=" and
+							parent.spelling == "DeletedCopy" and
+							child.copy_assignment_operator?
+			end
+		end
+
+		it "returns true for a copy assignment operator" do
+			expect(copy_assign).not_to be_nil
+			expect(copy_assign.copy_assignment_operator?).to be true
+		end
+	end
+
+	describe "#move_assignment_operator?" do
+		let(:move_assign) do
+			find_matching(cursor_types) do |child, parent|
+				child.kind == :cursor_cxx_method and child.spelling == "operator=" and
+							parent.spelling == "DeletedCopy" and
+							child.move_assignment_operator?
+			end
+		end
+
+		it "returns true for a move assignment operator" do
+			expect(move_assign).not_to be_nil
+			expect(move_assign.move_assignment_operator?).to be true
+		end
+	end
+
+	describe "#explicit?" do
+		let(:explicit_ctor) do
+			find_matching(cursor_types) do |child, parent|
+				child.kind == :cursor_constructor and parent.spelling == "ExplicitCtor"
+			end
+		end
+
+		it "returns true for an explicit constructor" do
+			expect(explicit_ctor.explicit?).to be true
+		end
+	end
+
+	describe "#enum_scoped?" do
+		let(:scoped_enum) do
+			find_matching(cursor_types) do |child, parent|
+				child.kind == :cursor_enum_decl and child.spelling == "ScopedEnum"
+			end
+		end
+
+		it "returns true for a scoped enum" do
+			expect(scoped_enum.enum_scoped?).to be true
+		end
+	end
+
+	describe "#const?" do
+		let(:const_method) do
+			find_matching(cursor_types) do |child, parent|
+				child.kind == :cursor_cxx_method and child.spelling == "getValue"
+			end
+		end
+
+		let(:non_const_method) do
+			find_matching(cursor_types) do |child, parent|
+				child.kind == :cursor_cxx_method and child.spelling == "setValue"
+			end
+		end
+
+		it "returns true for a const method" do
+			expect(const_method.const?).to be true
+		end
+
+		it "returns false for a non-const method" do
+			expect(non_const_method.const?).to be false
+		end
+	end
+
+	describe "#to_s" do
+		let(:func) do
+			find_matching(cursor_cxx) do |child, parent|
+				child.kind == :cursor_function and child.spelling == "f_non_variadic"
+			end
+		end
+
+		it "returns a string representation" do
+			str = func.to_s
+			expect(str).to be_kind_of(String)
+			expect(str).to match(/^Cursor </)
+			expect(str).to include("f_non_variadic")
+		end
+	end
+
+	describe "#each with traversal control" do
+		it "supports :break to stop traversal" do
+			count = 0
+			cursor_cxx.each do |child, parent|
+				count += 1
+				:break
+			end
+			expect(count).to eq(1)
+		end
+
+		it "supports :continue to skip children" do
+			children = []
+			cursor_cxx.each do |child, parent|
+				children << child.spelling
+				:continue
+			end
+			expect(children).not_to be_empty
+		end
+	end
+
+	describe "#ancestors_by_kind" do
+		let(:method_cursor) do
+			find_matching(cursor_cxx) do |child, parent|
+				child.kind == :cursor_cxx_method and child.spelling == "func_a" and parent.spelling == "B"
+			end
+		end
+
+		it "returns ancestors matching the given kinds" do
+			ancestors = method_cursor.ancestors_by_kind(:cursor_struct)
+			expect(ancestors).to be_kind_of(Array)
+			expect(ancestors.map(&:spelling)).to include("B")
+		end
+
+		it "returns empty array when no ancestors match" do
+			ancestors = method_cursor.ancestors_by_kind(:cursor_namespace)
+			expect(ancestors).to eq([])
+		end
+	end
+
+	describe "#printing_policy" do
+		let(:func) do
+			find_matching(cursor_cxx) do |child, parent|
+				child.kind == :cursor_function and child.spelling == "f_variadic"
+			end
+		end
+
+		it "returns a PrintingPolicy" do
+			expect(func.printing_policy).to be_kind_of(PrintingPolicy)
 		end
 	end
 end
