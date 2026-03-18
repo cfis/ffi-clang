@@ -41,7 +41,7 @@ module FFI
 				command_line_args = Array(command_line_args)
 				
 				# Inject -resource-dir if libclang can't find it on its own:
-				command_line_args = command_line_args + Lib.resource.command_line_args(command_line_args)
+				command_line_args = command_line_args + Lib.args.command_line_args(command_line_args)
 				
 				unsaved_files = UnsavedFile.unsaved_pointer_from(unsaved)
 				
