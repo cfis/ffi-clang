@@ -793,12 +793,6 @@ module FFI
 					Lib.get_string @platform_availability[:platform]
 				end
 				
-				# Get the platform name.
-				# @returns [String] The platform name.
-				def platform
-					Lib.get_string @platform_availability[:platform]
-				end
-				
 				# Get the version where the feature was introduced.
 				# @returns [Lib::CXVersion] The introduced version.
 				def introduced
