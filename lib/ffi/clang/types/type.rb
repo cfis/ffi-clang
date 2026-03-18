@@ -133,7 +133,7 @@ module FFI
 				end
 				
 				# Get the type of a template argument at the given index.
-				# For template specializations (e.g., std::vector<int>), this returns the type of
+				# For template specializations (e.g., `std::vector<int>`), this returns the type of
 				# the template argument at the specified position.
 				# @parameter index [Integer] The zero-based index of the template argument.
 				# @returns [Type] The type of the template argument at the given index.
@@ -142,7 +142,7 @@ module FFI
 				end
 				
 				# Get the number of template arguments for this type.
-				# For template specializations (e.g., std::map<int, std::string>), this returns the
+				# For template specializations (e.g., `std::map<int, std::string>`), this returns the
 				# number of template arguments. Returns -1 if this is not a template specialization.
 				# @returns [Integer] The number of template arguments, or -1 if not a template type.
 				def num_template_arguments
