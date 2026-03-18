@@ -21,6 +21,8 @@ jobs:
           - { os: ubuntu-latest, ruby: "3.4", experimental: false }
           - { os: ubuntu-latest, ruby: "4.0", experimental: false }
           - { os: ubuntu-latest, ruby: "head", experimental: false }
+          # macOS
+          - { os: macos-latest, ruby: "4.0", experimental: false }
           # Windows MinGW
           - { os: windows-latest, ruby: "4.0", experimental: false }
 
