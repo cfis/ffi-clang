@@ -16,7 +16,34 @@ module FFI
 		class MswinArgs < Args
 			VSWHERE = "C:/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
 			
+			# Pin libclang in memory so Windows will not unload it at exit.
+			#
+			# LLVM's rpmalloc allocator registers Fiber Local Storage (FLS)
+			# callbacks via FlsAlloc but does not call FlsFree on
+			# DLL_PROCESS_DETACH (LLVM bug #154361, fixed in LLVM 22.1.0 by
+			# https://github.com/llvm/llvm-project/pull/171465).
+			# Pinning with GET_MODULE_HANDLE_EX_FLAG_PIN prevents the unload
+			# so the FLS callbacks remain valid through process shutdown.
+			#
+			# @parameter library [FFI::DynamicLibrary] The loaded libclang library.
+			def post_load(library)
+				symbol = library.find_symbol("clang_getClangVersion")
+				return unless symbol
+				
+				kernel32 = FFI::DynamicLibrary.open("kernel32", 0)
+				get_module_handle_ex_w = kernel32.find_function("GetModuleHandleExW")
+				return unless get_module_handle_ex_w
+				
+				get_module_handle_ex_flag_from_address = 0x4
+				get_module_handle_ex_flag_pin = 0x1
+				flags = get_module_handle_ex_flag_from_address | get_module_handle_ex_flag_pin
+				handle_out = FFI::MemoryPointer.new(:pointer)
+				pin = FFI::Function.new(:bool, [:uint, :pointer, :pointer], get_module_handle_ex_w)
+				pin.call(flags, symbol, handle_out)
+			end
+			
 			private
+			
 			
 			def find_libclang_paths
 				if llvm_bin_dir

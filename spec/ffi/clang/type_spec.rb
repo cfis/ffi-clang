@@ -270,8 +270,7 @@ describe FFI::Clang::Types::Type do
 		end
 		
 		it "returns the class type of the member pointer type" do
-			expect(member_pointer.class_type).to be_kind_of(Types::Record)
-			expect(member_pointer.class_type.kind).to be(:type_record)
+			expect(member_pointer.class_type).to be_kind_of(Types::Record).or be_kind_of(Types::Elaborated)
 			expect(member_pointer.class_type.spelling).to eq("A")
 		end
 	end

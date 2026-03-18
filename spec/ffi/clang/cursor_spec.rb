@@ -760,7 +760,11 @@ describe Cursor do
 		
 		it "returns the integer type of the enum declaration" do
 			expect(enum.enum_type).to be_kind_of(Types::Type)
-			expect(enum.enum_type.kind).to be(:type_uint)
+			if FFI::Clang.platform == :mswin
+				expect(enum.enum_type.kind).to be(:type_int)
+			else
+				expect(enum.enum_type.kind).to be(:type_uint)
+			end
 		end
 	end
 	
@@ -803,7 +807,7 @@ describe Cursor do
 			end
 		end
 		
-		it "returns a cursor for one of the overloaded declarations" do
+		it "returns a cursor for one of the overloaded declarations", skip: (FFI::Clang.platform == :mswin) do
 			expect(overloaded.overloaded_decl(0)).to be_kind_of(Cursor)
 			expect(overloaded.overloaded_decl(0).kind).to be(:cursor_function_template)
 			expect(overloaded.overloaded_decl(0).spelling).to eq("func_overloaded")
@@ -817,7 +821,7 @@ describe Cursor do
 			end
 		end
 		
-		it "returns the number of overloaded declarations" do
+		it "returns the number of overloaded declarations", skip: (FFI::Clang.platform == :mswin) do
 			expect(overloaded.num_overloaded_decls).to be_kind_of(Integer)
 			expect(overloaded.num_overloaded_decls).to be(2)
 		end

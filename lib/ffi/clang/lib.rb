@@ -38,6 +38,8 @@ module FFI
 			
 			@args.libclang_loaded_path = ffi_libraries.first&.name
 			
+			@args.post_load(ffi_libraries.first)
+			
 			# The platform-specific clang configuration.
 			# @returns [Args] The args instance.
 			def self.args
