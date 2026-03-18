@@ -75,8 +75,23 @@ describe SourceLocation do
 		it "returns source location that does not care a # line directive" do
 			expect(expansion_location.line).to eq(3)
 		end
+
+		describe "#as_string" do
+			it "returns file:line:column:offset format" do
+				str = expansion_location.as_string
+				expect(str).to be_kind_of(String)
+				expect(str).to match(/.*:\d+:\d+:\d+/)
+			end
+		end
+
+		describe "#to_s" do
+			it "returns a descriptive string" do
+				str = expansion_location.to_s
+				expect(str).to match(/^ExpansionLocation </)
+			end
+		end
 	end
-	
+
 	describe "#presumed_location" do
 		let (:presumed_location) {loc1_cursor.presumed_location}
 		
@@ -92,8 +107,23 @@ describe SourceLocation do
 		it "returns source location specified by a # line directive" do
 			expect(presumed_location.line).to eq(124)
 		end
+
+		describe "#as_string" do
+			it "returns filename:line:column format" do
+				str = presumed_location.as_string
+				expect(str).to be_kind_of(String)
+				expect(str).to match(/.*:\d+:\d+/)
+			end
+		end
+
+		describe "#to_s" do
+			it "returns a descriptive string" do
+				str = presumed_location.to_s
+				expect(str).to match(/^PresumedLocation </)
+			end
+		end
 	end
-	
+
 	describe "#file_location" do
 		let (:file_location) {loc1_cursor.file_location}
 		
@@ -105,8 +135,23 @@ describe SourceLocation do
 		it "returns source location that does not care a # line directive" do
 			expect(file_location.line).to eq(3)
 		end
+
+		describe "#as_string" do
+			it "returns file:line:column:offset format" do
+				str = file_location.as_string
+				expect(str).to be_kind_of(String)
+				expect(str).to match(/.*:\d+:\d+:\d+/)
+			end
+		end
+
+		describe "#to_s" do
+			it "returns a descriptive string" do
+				str = file_location.to_s
+				expect(str).to match(/^FileLocation </)
+			end
+		end
 	end
-	
+
 	describe "#spelling_location" do
 		let (:spelling_location) {loc1_cursor.spelling_location}
 		
@@ -118,6 +163,21 @@ describe SourceLocation do
 		it "returns source location that does not care a # line directive" do
 			expect(spelling_location.line).to eq(3)
 		end
+
+		describe "#as_string" do
+			it "returns file:line:column:offset format" do
+				str = spelling_location.as_string
+				expect(str).to be_kind_of(String)
+				expect(str).to match(/.*:\d+:\d+:\d+/)
+			end
+		end
+
+		describe "#to_s" do
+			it "returns a descriptive string" do
+				str = spelling_location.to_s
+				expect(str).to match(/^SpellingLocation </)
+			end
+		end
 	end
-	
+
 end

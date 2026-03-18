@@ -9,6 +9,14 @@
 # Copyright, 2014, by Masahiro Sano.
 # Copyright, 2024, by Charlie Savage.
 
+if ENV["COVERAGE"]
+	require "simplecov"
+	SimpleCov.start do
+		add_filter "/spec/"
+		add_filter "/vendor/"
+	end
+end
+
 require_relative "../lib/ffi/clang"
 
 include FFI::Clang

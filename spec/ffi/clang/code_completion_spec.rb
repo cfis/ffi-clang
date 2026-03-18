@@ -8,7 +8,7 @@
 describe CodeCompletion do
 	let(:filename) {fixture_path("completion.cxx")}
 	let(:translation_unit) {Index.new.parse_translation_unit(filename)}
-	let(:line) {7}
+	let(:line) {13}
 	let(:column) {6}
 	let(:results) {translation_unit.code_complete(filename, line, column)}
 	
@@ -80,9 +80,14 @@ describe CodeCompletion do
 		end
 		
 		it "#objc_selector" do
-			#TODO
+			expect(results.objc_selector).to be_kind_of(String).or be_nil
 		end
-		
+
+		it "#inspect" do
+			str = results.inspect
+			expect(str).to be_kind_of(String)
+		end
+
 		it "#sort!" do
 			results.sort!
 			
@@ -101,6 +106,12 @@ describe CodeCompletion do
 		
 		it "#kind" do
 			expect(result.kind).to be_kind_of(Symbol)
+		end
+
+		it "#inspect" do
+			str = result.inspect
+			expect(str).to be_kind_of(String)
+			expect(str).to include("<")
 		end
 	end
 	
@@ -147,14 +158,35 @@ describe CodeCompletion do
 		
 		it "#annotation" do
 			expect(str.annotation(100)).to be_nil
-			# TODO: need tests for String which has annotation
 		end
-		
+
 		it "#annotations" do
 			expect(str.annotations).to be_kind_of(Array)
-			# TODO: need tests for String which has annotation
 		end
-		
+	end
+
+	describe "CodeCompletion::String with annotations" do
+		let(:annotated_results) {translation_unit.code_complete(filename, 17, 7)}
+		let(:annotated_str) do
+			annotated_results.find {|r| r.string.num_annotations > 0}.string
+		end
+
+		it "#num_annotations returns the annotation count" do
+			expect(annotated_str.num_annotations).to eq(1)
+		end
+
+		it "#annotation returns the annotation text" do
+			expect(annotated_str.annotation(0)).to eq("my_annotation")
+		end
+
+		it "#annotations returns all annotations" do
+			expect(annotated_str.annotations).to eq(["my_annotation"])
+		end
+	end
+
+	describe CodeCompletion::String do
+		let(:str) {results.sort!; results.find{|x| x.string.chunk_text(1) == "assign"}.string}
+
 		it "#parent" do
 			expect(str.parent).to be_kind_of(String)
 			expect(str.parent).to be =~ /std.+vector/
@@ -163,6 +195,11 @@ describe CodeCompletion do
 		it "#comment" do
 			expect(str.comment).to be_nil
 			# TODO: need tests for String which has real comment
+		end
+
+		it "#inspect" do
+			str_inspect = str.inspect
+			expect(str_inspect).to be_kind_of(String)
 		end
 	end
 end

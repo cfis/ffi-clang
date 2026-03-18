@@ -42,19 +42,45 @@ describe SourceRange do
 	
 	describe "Get Range" do
 		let(:range) {SourceRange.new(translation_unit_range.start, translation_unit_range.end)}
-		
+
 		it "can be obtained from two source locations" do
 			expect(range).to be_kind_of(SourceRange)
 			expect(range.null?).to be false
 		end
-		
+
 		it "is same to original source range" do
 			expect(range).to eq(translation_unit_range)
 		end
-		
+
 		it "is same to original source range's locations" do
 			expect(range.start).to eq(translation_unit_range.start)
 			expect(range.end).to eq(translation_unit_range.end)
+		end
+	end
+
+	describe "#bytesize" do
+		let(:func_cursor) {find_by_kind(translation_unit.cursor, :cursor_function)}
+		let(:func_range) {func_cursor.extent}
+
+		it "returns the byte size of the range" do
+			expect(func_range.bytesize).to be_kind_of(Integer)
+			expect(func_range.bytesize).to be > 0
+		end
+	end
+
+	describe "#text" do
+		let(:func_cursor) {find_by_kind(translation_unit.cursor, :cursor_function)}
+		let(:func_range) {func_cursor.extent}
+
+		it "returns the source text for the range" do
+			text = func_range.text
+			expect(text).to be_kind_of(String)
+			expect(text).to include("sum")
+		end
+
+		it "returns nil for a null range" do
+			null_range = SourceRange.null_range
+			expect(null_range.text).to be_nil
 		end
 	end
 end

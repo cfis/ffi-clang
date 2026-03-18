@@ -179,6 +179,20 @@ describe TranslationUnit do
 		end
 	end
 	
+	describe "#inclusions" do
+		let(:docs_tu) {Index.new.parse_translation_unit(fixture_path("docs.c"))}
+
+		it "iterates over included files" do
+			files = []
+			docs_tu.inclusions do |file, locations|
+				files << file
+			end
+			expect(files).to be_kind_of(Array)
+			expect(files.length).to be > 0
+			expect(files.any? {|f| f.include?("docs.h")}).to be true
+		end
+	end
+
 	describe "#resource_usage" do
 		let (:ru) {translation_unit.resource_usage}
 		it "returns ResourceUsage instance that represents memory usage of TU" do
