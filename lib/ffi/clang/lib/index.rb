@@ -29,12 +29,11 @@ module FFI
 				# FFI doesn't support bitfields, so these are packed into a single field.
 				# Use the helper methods to set them.
 				#
-				# clang-cl packs the unsigned bitfields into a 4-byte uint with 4 bytes of
-				# padding before the pointers. So the struct is 32 bytes total.
-				# In contrast clang packs them into 2 bytes after the uchars with no extra
-				# padding. So the struct is 24 bytes total.
+				# On Windows, libclang packs the unsigned bitfields into a 4-byte uint
+				# with alignment padding, making the struct 32 bytes. On Linux/macOS,
+				# they pack into 2 bytes after the uchars (24 bytes total).
 				class CXIndexOptions < FFI::Struct
-					if Clang.platform == :mswin
+					if FFI::Platform.windows?
 						layout(
 							:size, :uint,
 							:thread_background_priority_for_indexing, CXChoice,
