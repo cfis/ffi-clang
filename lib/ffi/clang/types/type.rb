@@ -155,6 +155,69 @@ module FFI
 					Lib.get_num_template_arguments(@type)
 				end
 				
+				# Get the address space of this type.
+				# @returns [Integer] The address space number.
+				def address_space
+					Lib.get_address_space(@type)
+				end
+				
+				# Get the typedef name of this type.
+				# @returns [String] The typedef name.
+				def typedef_name
+					Lib.extract_string Lib.get_typedef_name(@type)
+				end
+				
+				# Check if this typedef is transparent.
+				# @returns [Boolean] True if this is a transparent tag typedef.
+				def transparent_tag_typedef?
+					Lib.type_is_transparent_tag_typedef(@type) != 0
+				end
+				
+				# Get the nullability kind of a pointer type.
+				# @returns [Integer] The nullability kind.
+				def nullability
+					Lib.type_get_nullability(@type)
+				end
+				
+				# Get the type modified by an attributed type.
+				# @returns [Type] The modified type.
+				def modified_type
+					Type.create Lib.type_get_modified_type(@type), @translation_unit
+				end
+				
+				# Get the value type of an atomic type.
+				# @returns [Type] The value type.
+				def value_type
+					Type.create Lib.type_get_value_type(@type), @translation_unit
+				end
+				
+				# Pretty-print this type using a printing policy.
+				# @parameter policy [PrintingPolicy] The printing policy to use.
+				# @returns [String] The pretty-printed type string.
+				def pretty_printed(policy)
+					Lib.extract_string Lib.get_type_pretty_printed(@type, policy)
+				end
+				
+				# Get the fully qualified name of this type.
+				# @parameter policy [PrintingPolicy] The printing policy to use.
+				# @parameter with_global_ns_prefix [Boolean] Whether to prepend "::".
+				# @returns [String] The fully qualified type name.
+				def fully_qualified_name(policy, with_global_ns_prefix: false)
+					Lib.extract_string Lib.get_fully_qualified_name(@type, policy, with_global_ns_prefix ? 1 : 0)
+				end
+				
+				# Visit all fields of a record type.
+				# @yields {|cursor| ...} Each field cursor.
+				# 	@parameter cursor [Cursor] The field cursor.
+				# @returns [Boolean] True if visitation completed, false if it was aborted.
+				def visit_fields(&block)
+					callback = Proc.new do |cursor, _data|
+						result = block.call(Cursor.new(cursor, @translation_unit))
+						result == :break ? 0 : 1
+					end
+					Lib.type_visit_fields(@type, callback, nil) != 0
+				end
+				
 				# Compare this type with another for equality.
 				# @parameter other [Type] The other type to compare.
 				# @returns [Boolean] True if the types are equal.

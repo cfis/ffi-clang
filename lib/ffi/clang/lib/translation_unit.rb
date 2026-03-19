@@ -109,6 +109,14 @@ module FFI
 			attach_function :resource_usage, :clang_getCXTUResourceUsage, [:CXTranslationUnit], CXTUResourceUsage.by_value
 			attach_function :dispose_resource_usage, :clang_disposeCXTUResourceUsage, [CXTUResourceUsage.by_value], :void
 			attach_function :resource_usage_name, :clang_getTUResourceUsageName, [:resource_usage_kind], :string
+			
+			typedef :pointer, :CXTargetInfo
+			
+			attach_function :get_translation_unit_target_info, :clang_getTranslationUnitTargetInfo, [:CXTranslationUnit], :CXTargetInfo
+			attach_function :target_info_dispose, :clang_TargetInfo_dispose, [:CXTargetInfo], :void
+			attach_function :target_info_get_triple, :clang_TargetInfo_getTriple, [:CXTargetInfo], CXString.by_value
+			attach_function :target_info_get_pointer_width, :clang_TargetInfo_getPointerWidth, [:CXTargetInfo], :int
+			attach_function :suspend_translation_unit, :clang_suspendTranslationUnit, [:CXTranslationUnit], :uint
 		end
 	end
 end

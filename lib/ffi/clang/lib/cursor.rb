@@ -468,6 +468,9 @@ module FFI
 			callback :visit_children_function, [CXCursor.by_value, CXCursor.by_value, :pointer], :child_visit_result
 			attach_function :visit_children, :clang_visitChildren, [CXCursor.by_value, :visit_children_function, :pointer], :uint
 			
+			callback :visit_fields_callback, [CXCursor.by_value, :pointer], :uint
+			attach_function :type_visit_fields, :clang_Type_visitFields, [CXType.by_value, :visit_fields_callback, :pointer], :uint
+			
 			enum :result, [:success, :invalid, :visit_break]
 			attach_function :find_references_in_file, :clang_findReferencesInFile, [CXCursor.by_value, :CXFile, CXCursorAndRangeVisitor.by_value], :result
 			
@@ -517,6 +520,46 @@ module FFI
 			attach_function :is_abstract, :clang_CXXRecord_isAbstract, [CXCursor.by_value], :uint
 			attach_function :is_enum_scoped, :clang_EnumDecl_isScoped, [CXCursor.by_value], :uint
 			attach_function :is_const, :clang_CXXMethod_isConst, [CXCursor.by_value], :uint
+			
+			enum :visibility_kind, [
+				:visibility_invalid, 0,
+				:visibility_hidden, 1,
+				:visibility_protected, 2,
+				:visibility_default, 3
+			]
+			
+			enum :storage_class, [
+				:sc_invalid, 0,
+				:sc_none, 1,
+				:sc_extern, 2,
+				:sc_static, 3,
+				:sc_private_extern, 4,
+				:sc_opencl_work_group_local, 5,
+				:sc_auto, 6,
+				:sc_register, 7
+			]
+			
+			enum :tls_kind, [
+				:tls_none, 0,
+				:tls_dynamic, 1,
+				:tls_static, 2
+			]
+			
+			attach_function :is_invalid_declaration, :clang_isInvalidDeclaration, [CXCursor.by_value], :uint
+			attach_function :cursor_has_attrs, :clang_Cursor_hasAttrs, [CXCursor.by_value], :uint
+			attach_function :get_cursor_visibility, :clang_getCursorVisibility, [CXCursor.by_value], :visibility_kind
+			attach_function :cursor_get_storage_class, :clang_Cursor_getStorageClass, [CXCursor.by_value], :storage_class
+			attach_function :cursor_get_tls_kind, :clang_getCursorTLSKind, [CXCursor.by_value], :tls_kind
+			attach_function :cursor_is_function_inlined, :clang_Cursor_isFunctionInlined, [CXCursor.by_value], :uint
+			attach_function :cursor_is_macro_function_like, :clang_Cursor_isMacroFunctionLike, [CXCursor.by_value], :uint
+			attach_function :cursor_is_macro_builtin, :clang_Cursor_isMacroBuiltin, [CXCursor.by_value], :uint
+			attach_function :cursor_has_var_decl_global_storage, :clang_Cursor_hasVarDeclGlobalStorage, [CXCursor.by_value], :uint
+			attach_function :cursor_has_var_decl_external_storage, :clang_Cursor_hasVarDeclExternalStorage, [CXCursor.by_value], :uint
+			attach_function :cursor_is_inline_namespace, :clang_Cursor_isInlineNamespace, [CXCursor.by_value], :uint
+			attach_function :cursor_get_mangling, :clang_Cursor_getMangling, [CXCursor.by_value], CXString.by_value
+			attach_function :cursor_get_offset_of_field, :clang_Cursor_getOffsetOfField, [CXCursor.by_value], :long_long
+			attach_function :cursor_get_brief_comment_text, :clang_Cursor_getBriefCommentText, [CXCursor.by_value], CXString.by_value
+			attach_function :cursor_get_spelling_name_range, :clang_Cursor_getSpellingNameRange, [CXCursor.by_value, :uint, :uint], CXSourceRange.by_value
 			
 			if Clang.clang_version >= Gem::Version.new("16.0.0")
 				attach_function :get_unqualified_type, :clang_getUnqualifiedType, [CXType.by_value], CXType.by_value

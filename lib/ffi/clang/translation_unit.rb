@@ -182,6 +182,30 @@ module FFI
 				Lib.get_inclusions(self, adapter, nil)
 			end
 			
+			# Get the target triple for this translation unit.
+			# @returns [String] The target triple string.
+			def target_triple
+				target_info = Lib.get_translation_unit_target_info(self)
+				triple = Lib.extract_string Lib.target_info_get_triple(target_info)
+				Lib.target_info_dispose(target_info)
+				triple
+			end
+			
+			# Get the pointer width for the target of this translation unit.
+			# @returns [Integer] The pointer width in bits.
+			def target_pointer_width
+				target_info = Lib.get_translation_unit_target_info(self)
+				width = Lib.target_info_get_pointer_width(target_info)
+				Lib.target_info_dispose(target_info)
+				width
+			end
+			
+			# Suspend this translation unit to free memory.
+			# @returns [Boolean] True if the translation unit was successfully suspended.
+			def suspend
+				Lib.suspend_translation_unit(self) != 0
+			end
+			
 			# Represents resource usage statistics for a translation unit.
 			class ResourceUsage < AutoPointer
 				# Initialize resource usage from a CXTUResourceUsage structure.

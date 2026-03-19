@@ -219,7 +219,7 @@ describe Comment do
 				expect(comment.to_xml).to be_kind_of(String)
 			end
 		end
-
+		
 		describe "#text" do
 			it "returns combined text from children" do
 				text = comment.text
@@ -228,7 +228,7 @@ describe Comment do
 			end
 		end
 	end
-
+	
 	describe BlockCommandComment do
 		let(:comment_cursor) do
 			find_matching(cursor) do |child, parent|
