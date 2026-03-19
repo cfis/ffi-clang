@@ -66,6 +66,19 @@ module FFI
 			def modification
 				Time.at(@unique_id[:modification])
 			end
+			
+			# Get the real (resolved) path name of this file.
+			# @returns [String] The real path name.
+			def real_path_name
+				Lib.extract_string Lib.file_try_get_real_path_name(self)
+			end
+			
+			# Check if this file is equal to another file.
+			# @parameter other [File] The other file to compare.
+			# @returns [Boolean] True if the files are equal.
+			def ==(other)
+				Lib.file_is_equal(self, other) != 0
+			end
 		end
 	end
 end

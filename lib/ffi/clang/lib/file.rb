@@ -41,6 +41,9 @@ module FFI
 			attach_function :is_file_multiple_include_guarded, :clang_isFileMultipleIncludeGuarded, [:CXTranslationUnit, :CXFile], :int
 			
 			attach_function :get_file_unique_id, :clang_getFileUniqueID, [:CXFile, :pointer], :int
+			
+			attach_function :file_is_equal, :clang_File_isEqual, [:CXFile, :CXFile], :int
+			attach_function :file_try_get_real_path_name, :clang_File_tryGetRealPathName, [:CXFile], CXString.by_value
 		end
 	end
 end
