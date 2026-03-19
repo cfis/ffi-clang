@@ -59,3 +59,20 @@ struct ConstMethod {
 	int getValue() const;
 	void setValue(int v);
 };
+
+// Binary and unary operators
+int binary_operator_func() {
+	int a = 10;
+	int b = 20;
+	int c = a + b;
+	int d = a * b;
+	int e = a - b;
+	return c;
+}
+
+int unary_operator_func() {
+	int x = 5;
+	int y = -x;
+	int z = ++x;
+	return y;
+}

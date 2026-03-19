@@ -85,19 +85,43 @@ describe FFI::Clang::Types::Type do
 		end
 	end
 	
+	describe "#unqualified_type" do
+		let(:const_type) do
+			find_matching(cursor_cxx) do |child, parent|
+				child.kind == :cursor_typedef_decl and child.spelling == "const_int_ptr"
+			end.type.canonical.pointee
+		end
+
+		it "returns the type with qualifiers removed" do
+			expect(const_type.const_qualified?).to be true
+			unqualified = const_type.unqualified_type
+			expect(unqualified).to be_kind_of(Types::Type)
+			expect(unqualified.const_qualified?).to be false
+			expect(unqualified.kind).to eq(:type_int)
+		end
+
+		it "returns the same type when already unqualified" do
+			int_type = find_matching(cursor_cxx) do |child, parent|
+				child.kind == :cursor_field_decl and child.spelling == "int_member_a"
+			end.type
+			expect(int_type.const_qualified?).to be false
+			expect(int_type.unqualified_type.kind).to eq(int_type.kind)
+		end
+	end
+
 	describe "#const_qualified?" do
 		let(:pointer_type) do
 			find_matching(cursor_cxx) do |child, parent|
 				child.kind == :cursor_typedef_decl and child.spelling == "const_int_ptr"
 			end.type.canonical
 		end
-		
+
 		let(:pointee_type) do
 			find_matching(cursor_cxx) do |child, parent|
 				child.kind == :cursor_typedef_decl and child.spelling == "const_int_ptr"
 			end.type.canonical.pointee
 		end
-		
+
 		it "checks type is const qualified" do
 			expect(pointee_type.const_qualified?).to equal true
 		end

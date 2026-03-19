@@ -1375,4 +1375,47 @@ describe FFI::Clang::Cursor do
 			expect(func.printing_policy).to be_kind_of(PrintingPolicy)
 		end
 	end
+
+	describe "#binary_operator_kind" do
+		let(:binary_op) do
+			find_matching(cursor_types) do |child, parent|
+				child.kind == :cursor_binary_operator and child.spelling == "+"
+			end
+		end
+
+		it "returns the binary operator kind" do
+			expect(binary_op).not_to be_nil
+			expect(binary_op.binary_operator_kind).to eq(:binary_operator_add)
+		end
+	end
+
+	describe ".binary_operator_kind_spelling" do
+		it "returns the spelling for a binary operator kind" do
+			expect(Cursor.binary_operator_kind_spelling(:binary_operator_add)).to eq("+")
+			expect(Cursor.binary_operator_kind_spelling(:binary_operator_mul)).to eq("*")
+			expect(Cursor.binary_operator_kind_spelling(:binary_operator_sub)).to eq("-")
+		end
+	end
+
+	describe "#unary_operator_kind" do
+		let(:unary_op) do
+			find_matching(cursor_types) do |child, parent|
+				child.kind == :cursor_unary_operator
+			end
+		end
+
+		it "returns the unary operator kind" do
+			expect(unary_op).not_to be_nil
+			kind = unary_op.unary_operator_kind
+			expect(kind).to be_a(Symbol)
+			expect(kind.to_s).to match(/^unary_operator_/)
+		end
+	end
+
+	describe ".unary_operator_kind_spelling" do
+		it "returns the spelling for a unary operator kind" do
+			expect(Cursor.unary_operator_kind_spelling(:unary_operator_Minus)).to eq("-")
+			expect(Cursor.unary_operator_kind_spelling(:unary_operator_PreInc)).to eq("++")
+		end
+	end
 end
