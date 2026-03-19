@@ -26,17 +26,35 @@ module FFI
 				#
 				# The C struct uses bitfields for ExcludeDeclarationsFromPCH (bit 0),
 				# DisplayDiagnostics (bit 1), and StorePreamblesInMemory (bit 2).
-				# FFI doesn't support bitfields, so these are packed into a single :ushort.
+				# FFI doesn't support bitfields, so these are packed into a single field.
 				# Use the helper methods to set them.
+				#
+				# clang-cl packs the unsigned bitfields into a 4-byte uint with 4 bytes of
+				# padding before the pointers. So the struct is 32 bytes total.
+				# In contrast clang packs them into 2 bytes after the uchars with no extra
+				# padding. So the struct is 24 bytes total.
 				class CXIndexOptions < FFI::Struct
-					layout(
-						:size, :uint,
-						:thread_background_priority_for_indexing, CXChoice,
-						:thread_background_priority_for_editing, CXChoice,
-						:bitfields, :ushort,
-						:preamble_storage_path, :pointer,
-						:invocation_emission_path, :pointer
-					)
+					if Clang.platform == :mswin
+						layout(
+							:size, :uint,
+							:thread_background_priority_for_indexing, CXChoice,
+							:thread_background_priority_for_editing, CXChoice,
+							:padding1, :ushort,
+							:bitfields, :uint,
+							:padding2, :uint,
+							:preamble_storage_path, :pointer,
+							:invocation_emission_path, :pointer
+						)
+					else
+						layout(
+							:size, :uint,
+							:thread_background_priority_for_indexing, CXChoice,
+							:thread_background_priority_for_editing, CXChoice,
+							:bitfields, :ushort,
+							:preamble_storage_path, :pointer,
+							:invocation_emission_path, :pointer
+						)
+					end
 					
 					# Create a new CXIndexOptions with size pre-populated.
 					def initialize(*args)
