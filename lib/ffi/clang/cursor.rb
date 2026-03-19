@@ -21,6 +21,7 @@ require_relative "printing_policy"
 require_relative "source_location"
 require_relative "source_range"
 require_relative "comment"
+require_relative "evaluation"
 
 module FFI
 	module Clang
@@ -272,6 +273,13 @@ module FFI
 			# @returns [Types::Type] The cursor type.
 			def type
 				Types::Type.create Lib.get_cursor_type(@cursor), @translation_unit
+			end
+			
+			# Evaluate this cursor as a compile-time constant.
+			# @returns [EvalResult | Nil] The evaluation result, or nil if evaluation failed.
+			def evaluate
+				result = Lib.cursor_evaluate(@cursor)
+				result.null? ? nil : EvalResult.new(result)
 			end
 			
 			# Get the result type for a function cursor.
@@ -790,6 +798,97 @@ module FFI
 			# @returns [String] The operator spelling (e.g., "-", "++").
 			def self.unary_operator_kind_spelling(kind)
 				Lib.extract_string Lib.get_unary_operator_kind_spelling(kind)
+			end
+			
+			# Check if this declaration is invalid or incomplete.
+			# @returns [Boolean] True if the declaration is invalid.
+			def invalid_declaration?
+				Lib.is_invalid_declaration(@cursor) != 0
+			end
+			
+			# Check if this cursor has any attributes.
+			# @returns [Boolean] True if the cursor has attributes.
+			def has_attrs?
+				Lib.cursor_has_attrs(@cursor) != 0
+			end
+			
+			# Get the visibility of this cursor.
+			# @returns [Symbol] The visibility (:visibility_invalid, :visibility_hidden, :visibility_protected, :visibility_default).
+			def visibility
+				Lib.get_cursor_visibility(@cursor)
+			end
+			
+			# Get the storage class of this declaration.
+			# @returns [Symbol] The storage class (:sc_none, :sc_extern, :sc_static, etc.).
+			def storage_class
+				Lib.cursor_get_storage_class(@cursor)
+			end
+			
+			# Get the thread-local storage kind of this cursor.
+			# @returns [Symbol] The TLS kind (:tls_none, :tls_dynamic, :tls_static).
+			def tls_kind
+				Lib.cursor_get_tls_kind(@cursor)
+			end
+			
+			# Check if this function is declared inline.
+			# @returns [Boolean] True if the function is inlined.
+			def function_inlined?
+				Lib.cursor_is_function_inlined(@cursor) != 0
+			end
+			
+			# Check if this macro cursor is function-like.
+			# @returns [Boolean] True if the macro is function-like.
+			def macro_function_like?
+				Lib.cursor_is_macro_function_like(@cursor) != 0
+			end
+			
+			# Check if this macro is a builtin macro.
+			# @returns [Boolean] True if the macro is a builtin.
+			def macro_builtin?
+				Lib.cursor_is_macro_builtin(@cursor) != 0
+			end
+			
+			# Check if this variable has global or file-scope storage.
+			# @returns [Boolean] True if the variable has global storage.
+			def has_global_storage?
+				Lib.cursor_has_var_decl_global_storage(@cursor) != 0
+			end
+			
+			# Check if this variable has external storage.
+			# @returns [Boolean] True if the variable has external storage.
+			def has_external_storage?
+				Lib.cursor_has_var_decl_external_storage(@cursor) != 0
+			end
+			
+			# Check if this namespace is an inline namespace.
+			# @returns [Boolean] True if the namespace is inline.
+			def inline_namespace?
+				Lib.cursor_is_inline_namespace(@cursor) != 0
+			end
+			
+			# Get the C++ mangled name of this cursor.
+			# @returns [String] The mangled name.
+			def mangling
+				Lib.extract_string Lib.cursor_get_mangling(@cursor)
+			end
+			
+			# Get the offset of a field in a record, in bits.
+			# @returns [Integer] The field offset in bits, or -1 on error.
+			def offset_of_field
+				Lib.cursor_get_offset_of_field(@cursor)
+			end
+			
+			# Get the brief documentation comment text for this cursor.
+			# @returns [String] The brief comment text.
+			def brief_comment_text
+				Lib.extract_string Lib.cursor_get_brief_comment_text(@cursor)
+			end
+			
+			# Get the source range for a piece of the cursor's spelling name.
+			# @parameter piece_index [Integer] The index of the name piece.
+			# @returns [SourceRange] The source range for the name piece.
+			def spelling_name_range(piece_index = 0)
+				SourceRange.new Lib.cursor_get_spelling_name_range(@cursor, piece_index, 0)
 			end
 			
 			# Represents platform availability information for a cursor.
