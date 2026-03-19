@@ -229,6 +229,13 @@ module FFI
 			
 			attach_function :get_num_template_arguments, :clang_Type_getNumTemplateArguments, [CXType.by_value], :int
 			attach_function :get_template_argument_as_type, :clang_Type_getTemplateArgumentAsType, [CXType.by_value, :uint], CXType.by_value
+			
+			attach_function :get_address_space, :clang_getAddressSpace, [CXType.by_value], :uint
+			attach_function :get_typedef_name, :clang_getTypedefName, [CXType.by_value], CXString.by_value
+			attach_function :type_is_transparent_tag_typedef, :clang_Type_isTransparentTagTypedef, [CXType.by_value], :uint
+			attach_function :type_get_nullability, :clang_Type_getNullability, [CXType.by_value], :int
+			attach_function :type_get_modified_type, :clang_Type_getModifiedType, [CXType.by_value], CXType.by_value
+			attach_function :type_get_value_type, :clang_Type_getValueType, [CXType.by_value], CXType.by_value
 		end
 	end
 end

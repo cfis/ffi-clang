@@ -42,6 +42,11 @@ module FFI
 			attach_function :get_printing_policy, :clang_getCursorPrintingPolicy, [CXCursor.by_value], :CXPrintingPolicy
 			attach_function :dispose_printing_policy, :clang_PrintingPolicy_dispose, [:CXPrintingPolicy], :void
 			attach_function :pretty_print, :clang_getCursorPrettyPrinted, [CXCursor.by_value, :CXPrintingPolicy], CXString.by_value
+			
+			if Clang.clang_version >= Gem::Version.new("21.0.0")
+				attach_function :get_type_pretty_printed, :clang_getTypePrettyPrinted, [CXType.by_value, :CXPrintingPolicy], CXString.by_value
+				attach_function :get_fully_qualified_name, :clang_getFullyQualifiedName, [CXType.by_value, :CXPrintingPolicy, :uint], CXString.by_value
+			end
 		end
 	end
 end
