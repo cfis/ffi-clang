@@ -765,33 +765,33 @@ module FFI
 			def const?
 				Lib.is_const(@cursor) != 0
 			end
-
+			
 			# Get the binary operator kind for a binary operator cursor.
 			# @returns [Symbol] The binary operator kind (e.g., :binary_operator_add, :binary_operator_mul).
 			def binary_operator_kind
 				Lib.get_cursor_binary_operator_kind(@cursor)
 			end
-
+			
 			# Get the string representation of a binary operator kind.
 			# @parameter kind [Symbol] The binary operator kind.
 			# @returns [String] The operator spelling (e.g., "+", "-", "*").
 			def self.binary_operator_kind_spelling(kind)
 				Lib.extract_string Lib.get_binary_operator_kind_spelling(kind)
 			end
-
+			
 			# Get the unary operator kind for a unary operator cursor.
 			# @returns [Symbol] The unary operator kind (e.g., :unary_operator_Minus, :unary_operator_PreInc).
 			def unary_operator_kind
 				Lib.get_cursor_unary_operator_kind(@cursor)
 			end
-
+			
 			# Get the string representation of a unary operator kind.
 			# @parameter kind [Symbol] The unary operator kind.
 			# @returns [String] The operator spelling (e.g., "-", "++").
 			def self.unary_operator_kind_spelling(kind)
 				Lib.extract_string Lib.get_unary_operator_kind_spelling(kind)
 			end
-
+			
 			# Represents platform availability information for a cursor.
 			class PlatformAvailability < AutoPointer
 				# Initialize platform availability from a memory pointer.
