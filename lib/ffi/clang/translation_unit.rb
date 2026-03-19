@@ -63,7 +63,7 @@ module FFI
 			# Get the default reparse options for this translation unit.
 			# @returns [Array(Symbol)] The default reparse options.
 			def default_reparse_options
-				bitmask = Lib.default_save_options(self)
+				bitmask = Lib.default_reparse_options(self)
 				Lib.opts_from Lib::ReparseFlags, bitmask
 			end
 			

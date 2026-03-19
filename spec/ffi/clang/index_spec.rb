@@ -77,4 +77,17 @@ describe Index do
 			expect {index.create_translation_unit "not_found.ast"}.to raise_error(FFI::Clang::Error)
 		end
 	end
+	
+	describe ".create_with_options" do
+		it "creates an index with options and can parse a file" do
+			options = FFI::Clang::Lib::CXIndexOptions.new
+			options.exclude_declarations_from_pch = true
+			
+			idx = Index.create_with_options(options)
+			expect(idx).to be_kind_of(Index)
+			
+			tu = idx.parse_translation_unit(fixture_path("a.c"))
+			expect(tu).to be_kind_of(TranslationUnit)
+		end
+	end
 end

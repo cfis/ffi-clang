@@ -85,6 +85,30 @@ describe FFI::Clang::Types::Type do
 		end
 	end
 	
+	describe "#unqualified_type" do
+		let(:const_type) do
+			find_matching(cursor_cxx) do |child, parent|
+				child.kind == :cursor_typedef_decl and child.spelling == "const_int_ptr"
+			end.type.canonical.pointee
+		end
+		
+		it "returns the type with qualifiers removed" do
+			expect(const_type.const_qualified?).to be true
+			unqualified = const_type.unqualified_type
+			expect(unqualified).to be_kind_of(Types::Type)
+			expect(unqualified.const_qualified?).to be false
+			expect(unqualified.kind).to eq(:type_int)
+		end
+		
+		it "returns the same type when already unqualified" do
+			int_type = find_matching(cursor_cxx) do |child, parent|
+				child.kind == :cursor_field_decl and child.spelling == "int_member_a"
+			end.type
+			expect(int_type.const_qualified?).to be false
+			expect(int_type.unqualified_type.kind).to eq(int_type.kind)
+		end
+	end
+	
 	describe "#const_qualified?" do
 		let(:pointer_type) do
 			find_matching(cursor_cxx) do |child, parent|
@@ -435,63 +459,63 @@ end
 
 describe FFI::Clang::Types::Pointer do
 	let(:cursor_types) {Index.new.parse_translation_unit(fixture_path("types.cxx")).cursor}
-
+	
 	describe "#function?" do
 		let(:func_ptr_type) do
 			find_matching(cursor_types) do |child, parent|
 				child.kind == :cursor_variable and child.spelling == "my_func_ptr"
 			end.type.canonical
 		end
-
+		
 		it "returns true for function pointer types" do
 			expect(func_ptr_type).to be_kind_of(Types::Pointer)
 			expect(func_ptr_type.function?).to be true
 		end
-
+		
 		let(:struct_ptr) do
 			find_matching(cursor_types) do |child, parent|
 				child.kind == :cursor_typedef_decl and child.spelling == "StructPtr"
 			end.type.canonical
 		end
-
+		
 		it "returns false for non-function pointer types" do
 			expect(struct_ptr).to be_kind_of(Types::Pointer)
 			expect(struct_ptr.function?).to be false
 		end
 	end
-
+	
 	describe "#class_type" do
 		let(:non_member_pointer) do
 			find_matching(cursor_types) do |child, parent|
 				child.kind == :cursor_typedef_decl and child.spelling == "StructPtr"
 			end.type.canonical
 		end
-
+		
 		it "returns nil for non-member pointer types" do
 			expect(non_member_pointer.class_type).to be_nil
 		end
 	end
-
+	
 	describe "#forward_declaration?" do
 		let(:cursor_fwd) {Index.new.parse_translation_unit(fixture_path("forward_decl.cpp")).cursor}
-
+		
 		let(:forward_ptr_type) do
 			find_matching(cursor_fwd) do |child, parent|
 				child.kind == :cursor_variable and child.spelling == "forward_ptr"
 			end.type
 		end
-
+		
 		let(:full_ptr_type) do
 			find_matching(cursor_fwd) do |child, parent|
 				child.kind == :cursor_variable and child.spelling == "full_ptr"
 			end.type
 		end
-
+		
 		it "returns true for pointers to forward-declared types" do
 			expect(forward_ptr_type).to be_kind_of(Types::Pointer)
 			expect(forward_ptr_type.forward_declaration?).to eq(true)
 		end
-
+		
 		it "returns false for pointers to fully-defined types" do
 			expect(full_ptr_type).to be_kind_of(Types::Pointer)
 			expect(full_ptr_type.forward_declaration?).to eq(false)
@@ -502,40 +526,40 @@ end
 describe FFI::Clang::Types::Record do
 	let(:cursor_types) {Index.new.parse_translation_unit(fixture_path("types.c")).cursor}
 	let(:cursor_list) {Index.new.parse_translation_unit(fixture_path("list.c")).cursor}
-
+	
 	describe "#anonymous?" do
 		let(:cursor_anonymous) {Index.new.parse_translation_unit(fixture_path("anonymous.h")).cursor}
-
+		
 		let(:anon_struct) do
 			find_matching(cursor_anonymous) do |child, parent|
 				child.kind == :cursor_struct and child.anonymous?
 			end.type
 		end
-
+		
 		it "returns truthy for anonymous record types" do
 			expect(anon_struct).to be_kind_of(Types::Record)
 			expect(anon_struct.anonymous?).to be_truthy
 		end
 	end
-
+	
 	describe "#record_type" do
 		let(:struct_type) do
 			find_matching(cursor_list) do |child, parent|
 				child.kind == :cursor_struct and child.spelling == "List"
 			end.type
 		end
-
+		
 		let(:union_type) do
 			find_matching(cursor_types) do |child, parent|
 				child.kind == :cursor_union and child.spelling == "SimpleUnion"
 			end.type
 		end
-
+		
 		it "returns :struct for struct types" do
 			expect(struct_type).to be_kind_of(Types::Record)
 			expect(struct_type.record_type).to eq(:struct)
 		end
-
+		
 		it "returns :union for union types" do
 			expect(union_type).to be_kind_of(Types::Record)
 			expect(union_type.record_type).to eq(:union)
@@ -545,14 +569,14 @@ end
 
 describe FFI::Clang::Types::Elaborated do
 	let(:cursor_types) {Index.new.parse_translation_unit(fixture_path("types.cxx")).cursor}
-
+	
 	describe "#named_type" do
 		let(:elaborated_type) do
 			find_matching(cursor_types) do |child, parent|
 				child.kind == :cursor_variable and child.spelling == "my_struct"
 			end.type
 		end
-
+		
 		it "returns the named type" do
 			expect(elaborated_type).to be_kind_of(Types::Elaborated)
 			named = elaborated_type.named_type
@@ -560,27 +584,27 @@ describe FFI::Clang::Types::Elaborated do
 			expect(named.spelling).to eq("SimpleStruct")
 		end
 	end
-
+	
 	describe "#anonymous?" do
 		let(:non_anonymous) do
 			find_matching(cursor_types) do |child, parent|
 				child.kind == :cursor_variable and child.spelling == "my_struct"
 			end.type
 		end
-
+		
 		it "returns false for non-anonymous elaborated types" do
 			expect(non_anonymous).to be_kind_of(Types::Elaborated)
 			expect(non_anonymous.anonymous?).to be false
 		end
 	end
-
+	
 	describe "#pointer?" do
 		let(:non_pointer) do
 			find_matching(cursor_types) do |child, parent|
 				child.kind == :cursor_variable and child.spelling == "my_struct"
 			end.type
 		end
-
+		
 		it "returns false when canonical type is not a pointer" do
 			expect(non_pointer).to be_kind_of(Types::Elaborated)
 			expect(non_pointer.pointer?).to be false
@@ -590,13 +614,13 @@ end
 
 describe FFI::Clang::Types::Vector do
 	let(:cursor_types) {Index.new.parse_translation_unit(fixture_path("types.cxx")).cursor}
-
+	
 	let(:vector_type) do
 		find_matching(cursor_types) do |child, parent|
 			child.kind == :cursor_variable and child.spelling == "my_vector"
 		end.type.canonical
 	end
-
+	
 	describe "#element_type" do
 		it "returns the element type of the vector" do
 			expect(vector_type).to be_kind_of(Types::Vector)
@@ -604,7 +628,7 @@ describe FFI::Clang::Types::Vector do
 			expect(element.kind).to eq(:type_int)
 		end
 	end
-
+	
 	describe "#size" do
 		it "returns the number of elements in the vector" do
 			expect(vector_type).to be_kind_of(Types::Vector)
@@ -615,14 +639,14 @@ end
 
 describe FFI::Clang::Types::TypeDef do
 	let(:cursor_cxx) {Index.new.parse_translation_unit(fixture_path("test.cxx")).cursor}
-
+	
 	describe "#anonymous?" do
 		let(:named_typedef) do
 			find_matching(cursor_cxx) do |child, parent|
 				child.kind == :cursor_typedef_decl and child.spelling == "const_int_ptr"
 			end.type
 		end
-
+		
 		it "returns false for typedef of non-anonymous type" do
 			expect(named_typedef).to be_kind_of(Types::TypeDef)
 			expect(named_typedef.anonymous?).to be false

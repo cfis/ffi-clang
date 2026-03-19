@@ -24,6 +24,15 @@ module FFI
 				super Lib.create_index(exclude_declarations ? 1 : 0, display_diagnostics ? 1 : 0)
 			end
 			
+			# Create a new index with extended options (clang 17+).
+			# @parameter options [Lib::CXIndexOptions] The index options struct.
+			# @returns [Index] A new index instance.
+			def self.create_with_options(options)
+				instance = allocate
+				FFI::AutoPointer.instance_method(:initialize).bind_call(instance, Lib.create_index_with_options(options))
+				instance
+			end
+			
 			# Release the index pointer.
 			# @parameter pointer [FFI::Pointer] The index pointer to release.
 			def self.release(pointer)

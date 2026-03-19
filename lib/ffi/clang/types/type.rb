@@ -125,6 +125,12 @@ module FFI
 					Cursor.new Lib.get_type_declaration(@type), @translation_unit
 				end
 				
+				# Get the type with all qualifiers (const, volatile, restrict) removed.
+				# @returns [Type] The unqualified type.
+				def unqualified_type
+					Type.create Lib.get_unqualified_type(@type), @translation_unit
+				end
+				
 				# Get the non-reference type.
 				# For reference types, returns the type that is being referenced.
 				# @returns [Type] The non-reference type.
