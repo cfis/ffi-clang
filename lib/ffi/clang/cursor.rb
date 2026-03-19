@@ -589,9 +589,10 @@ module FFI
 				
 				availability = []
 				cur_ptr = availability_ptr
-				[actual_availability_size, max_availability_size].min.times {availability << PlatformAvailability.new(cur_ptr)
-																																																																	cur_ptr += Lib::CXPlatformAvailability.size
-				}
+				[actual_availability_size, max_availability_size].min.times do
+					availability << PlatformAvailability.new(cur_ptr, availability_ptr)
+					cur_ptr += Lib::CXPlatformAvailability.size
+				end
 				
 				# return as Hash
 				{
@@ -893,15 +894,18 @@ module FFI
 			
 			# Represents platform availability information for a cursor.
 			class PlatformAvailability < AutoPointer
-				# Initialize platform availability from a memory pointer.
-				# @parameter memory_pointer [FFI::MemoryPointer] The memory pointer.
-				def initialize(memory_pointer)
+				# Initialize platform availability from a pointer into the availability buffer.
+				# @parameter memory_pointer [FFI::Pointer] Pointer to a CXPlatformAvailability struct.
+				# @parameter buffer [FFI::MemoryPointer] The original buffer that owns the struct memory.
+				def initialize(memory_pointer, buffer)
 					pointer = FFI::Pointer.new(memory_pointer)
 					super(pointer)
 					
-					# I'm not sure this is safe.
-					# Keep a reference to CXPlatformAvailability itself allocated by MemoryPointer.
-					@memory_pointer = memory_pointer
+					# Keep a reference to the buffer so it is not garbage collected
+					# while this object is alive. The buffer owns the struct memory;
+					# AutoPointer#release only disposes the strings within the struct
+					# via clang_disposeCXPlatformAvailability.
+					@buffer = buffer
 					@platform_availability = Lib::CXPlatformAvailability.new(memory_pointer)
 				end
 				
