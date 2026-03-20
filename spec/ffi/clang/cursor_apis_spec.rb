@@ -201,7 +201,7 @@ describe FFI::Clang::Types::Type do
 		end
 	end
 	
-	describe "#fully_qualified_name", from_21_0: true do
+	describe "#fully_qualified_name" do
 		let(:my_struct) do
 			find_matching(cursor) do |child, parent|
 				child.kind == :cursor_struct and child.spelling == "MyStruct"

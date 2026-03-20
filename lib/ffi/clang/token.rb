@@ -87,7 +87,7 @@ module FFI
 			# Get the spelling (text) of this token.
 			# @returns [String] The token spelling.
 			def spelling
-				Lib.extract_string Lib.get_token_spelliing(@translation_unit, @token)
+				Lib.extract_string Lib.get_token_spelling(@translation_unit, @token)
 			end
 			
 			# Get the location of this token.

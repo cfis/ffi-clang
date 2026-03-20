@@ -53,7 +53,7 @@ module FFI
 			# Get the diagnostic message text.
 			# @returns [String] The diagnostic spelling.
 			def spelling
-				Lib.get_string Lib.get_diagnostic_spelling(self)
+				Lib.extract_string Lib.get_diagnostic_spelling(self)
 			end
 			
 			# Get the source location of the diagnostic.

@@ -46,7 +46,7 @@ module FFI
 			]
 			
 			attach_function :get_token_kind, :clang_getTokenKind, [CXToken.by_value], :token_kind
-			attach_function :get_token_spelliing, :clang_getTokenSpelling, [:CXTranslationUnit, CXToken.by_value], CXString.by_value
+			attach_function :get_token_spelling, :clang_getTokenSpelling, [:CXTranslationUnit, CXToken.by_value], CXString.by_value
 			attach_function :get_token_location, :clang_getTokenLocation, [:CXTranslationUnit, CXToken.by_value], CXSourceLocation.by_value
 			attach_function :get_token_extent, :clang_getTokenExtent, [:CXTranslationUnit, CXToken.by_value], CXSourceRange.by_value
 			attach_function :tokenize, :clang_tokenize, [:CXTranslationUnit, CXSourceRange.by_value, :pointer, :pointer], :void
