@@ -5,6 +5,18 @@
 # Copyright, 2014-2025, by Samuel Williams.
 # Copyright, 2023, by Charlie Savage.
 
+describe "code completion enum mappings" do
+	it "includes current code completion flags" do
+		expect(FFI::Clang::Lib::CodeCompleteFlags[:skip_preamble]).to eq(0x08)
+		expect(FFI::Clang::Lib::CodeCompleteFlags[:include_completions_with_fix_its]).to eq(0x10)
+	end
+	
+	it "includes current completion contexts" do
+		expect(FFI::Clang::Lib::CompletionContext[:included_file]).to eq(1 << 22)
+		expect(FFI::Clang::Lib::CompletionContext[:unknown]).to eq((1 << 23) - 1)
+	end
+end
+
 describe CodeCompletion do
 	let(:filename) {fixture_path("completion.cxx")}
 	let(:translation_unit) {Index.new.parse_translation_unit(filename)}
@@ -42,6 +54,12 @@ describe CodeCompletion do
 			spy = double(stub: nil)
 			expect(spy).to receive(:stub).exactly(results.size).times
 			results.each {spy.stub}
+		end
+		
+		it "#each returns an Enumerator if no block is given" do
+			enumerator = results.each
+			expect(enumerator).to be_kind_of(Enumerator)
+			expect(enumerator.to_a).to eq(results.results)
 		end
 		
 		it "#num_diagnostics" do

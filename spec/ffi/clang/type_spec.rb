@@ -7,6 +7,62 @@
 # Copyright, 2014, by Masahiro Sano.
 # Copyright, 2024, by Charlie Savage.
 
+describe FFI::Clang::Lib::CXType do
+	let(:type) {described_class.new}
+	
+	describe "type kind mapping" do
+		it "maps added builtin kinds" do
+			type[:kind] = 30
+			expect(type[:kind]).to eq(:type_float128)
+			
+			type[:kind] = 39
+			expect(type[:kind]).to eq(:type_bfloat16)
+			
+			type[:kind] = 40
+			expect(type[:kind]).to eq(:type_ibm128)
+		end
+		
+		it "maps added HLSL kinds" do
+			type[:kind] = 179
+			expect(type[:kind]).to eq(:type_hlsl_resource)
+			
+			type[:kind] = 180
+			expect(type[:kind]).to eq(:type_hlsl_attributed_resource)
+			
+			type[:kind] = 181
+			expect(type[:kind]).to eq(:type_hlsl_inline_spirv)
+		end
+	end
+end
+
+describe "calling convention mapping" do
+	let(:calling_conv_value_class) do
+		Class.new(FFI::Struct) do
+			layout :value, FFI::Clang::Lib.find_type(:calling_conv)
+		end
+	end
+	let(:calling_conv_value) {calling_conv_value_class.new}
+	
+	it "maps corrected calling convention kinds" do
+		calling_conv_value[:value] = 8
+		expect(calling_conv_value[:value]).to eq(:calling_conv_x86_reg_call)
+		
+		calling_conv_value[:value] = 10
+		expect(calling_conv_value[:value]).to eq(:calling_conv_win64)
+	end
+	
+	it "maps added RISCV VLS calling convention kinds" do
+		calling_conv_value[:value] = 22
+		expect(calling_conv_value[:value]).to eq(:calling_conv_riscv_vls_call_32)
+		
+		calling_conv_value[:value] = 27
+		expect(calling_conv_value[:value]).to eq(:calling_conv_riscv_vls_call_1024)
+		
+		calling_conv_value[:value] = 33
+		expect(calling_conv_value[:value]).to eq(:calling_conv_riscv_vls_call_65536)
+	end
+end
+
 describe FFI::Clang::Types::Type do
 	let(:cursor) {Index.new.parse_translation_unit(fixture_path("a.c")).cursor}
 	let(:cursor_cxx) {Index.new.parse_translation_unit(fixture_path("test.cxx")).cursor}

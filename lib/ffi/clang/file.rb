@@ -5,6 +5,10 @@
 # Copyright, 2014-2025, by Samuel Williams.
 
 require_relative "lib/file"
+require_relative "lib/inclusions"
+require_relative "cursor"
+require_relative "source_range"
+require_relative "error"
 
 module FFI
 	module Clang
@@ -35,6 +39,16 @@ module FFI
 			# @returns [String] The file name.
 			def name
 				Lib.extract_string Lib.get_file_name(self)
+			end
+			
+			# Get the loaded contents of this file from libclang.
+			# @returns [String | Nil] The file contents, or `nil` if the file is not loaded.
+			def contents
+				size_pointer = MemoryPointer.new(:size_t)
+				contents_pointer = Lib.get_file_contents(@translation_unit, self, size_pointer)
+				return nil if contents_pointer.null?
+				
+				contents_pointer.read_string_length(size_pointer.read(:size_t))
 			end
 			
 			# Get the file modification time.
@@ -78,6 +92,31 @@ module FFI
 			# @returns [Boolean] True if the files are equal.
 			def ==(other)
 				Lib.file_is_equal(self, other) != 0
+			end
+			
+			# Iterate over include directives in this file.
+			# The translation unit must have been parsed with `:detailed_preprocessing_record`.
+			# @yields {|cursor, range| ...} Each include directive cursor and its source range.
+			# 	@parameter cursor [Cursor] The include directive cursor.
+			# 	@parameter range [SourceRange] The source range of the include directive.
+			# @returns [Enumerator] If no block is given.
+			# @raises [Error] If libclang cannot query includes for this file.
+			def find_includes(&block)
+				return to_enum(__method__) unless block_given?
+				
+				visit_adapter = Proc.new do |unused, cxcursor, cxsource_range|
+					cursor = Cursor.new(cxcursor, @translation_unit)
+					result = block.call(cursor, SourceRange.new(cxsource_range))
+					result == :break ? :break : :continue
+				end
+				
+				visitor = FFI::Clang::Lib::CXCursorAndRangeVisitor.new
+				visitor[:visit] = visit_adapter
+				
+				result = Lib.find_includes_in_file(@translation_unit, self, visitor)
+				raise Error, "error finding includes in file: #{name.inspect}" if result == :invalid
+				
+				self
 			end
 		end
 	end

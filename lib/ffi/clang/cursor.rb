@@ -17,6 +17,7 @@ require "set"
 require_relative "lib/cursor"
 require_relative "lib/code_completion"
 
+require_relative "overridden_cursors"
 require_relative "printing_policy"
 require_relative "source_location"
 require_relative "source_range"
@@ -415,6 +416,40 @@ module FFI
 				Lib.get_template_cursor_kind @cursor
 			end
 			
+			# Get the number of template arguments for a template specialization cursor.
+			# @returns [Integer] The number of template arguments, or `-1` if the cursor is not a template specialization.
+			def num_template_arguments
+				Lib.cursor_get_num_template_arguments(@cursor)
+			end
+			
+			# Get the kind of a template argument for a template specialization cursor.
+			# @parameter index [Integer] The zero-based template argument index.
+			# @returns [Symbol] The template argument kind.
+			def template_argument_kind(index)
+				Lib.cursor_get_template_argument_kind(@cursor, index)
+			end
+			
+			# Get the type of a template argument for a template specialization cursor.
+			# @parameter index [Integer] The zero-based template argument index.
+			# @returns [Types::Type] The template argument type, or an invalid type if the argument is not a type.
+			def template_argument_type(index)
+				Types::Type.create Lib.cursor_get_template_argument_type(@cursor, index), @translation_unit
+			end
+			
+			# Get the signed integral value of a template argument for a template specialization cursor.
+			# @parameter index [Integer] The zero-based template argument index.
+			# @returns [Integer] The signed integral value.
+			def template_argument_value(index)
+				Lib.cursor_get_template_argument_value(@cursor, index)
+			end
+			
+			# Get the unsigned integral value of a template argument for a template specialization cursor.
+			# @parameter index [Integer] The zero-based template argument index.
+			# @returns [Integer] The unsigned integral value.
+			def template_argument_unsigned_value(index)
+				Lib.cursor_get_template_argument_unsigned_value(@cursor, index)
+			end
+			
 			# Get the C++ access specifier.
 			# @returns [Symbol] The access specifier (`:public`, `:private`, or `:protected`).
 			def access_specifier
@@ -476,12 +511,12 @@ module FFI
 			def ancestors_by_kind(*kinds)
 				result = Array.new
 				
-				parent = self
-				while parent != self.semantic_parent
-					parent = self.semantic_parent
+				parent = self.semantic_parent
+				while parent.kind != :cursor_translation_unit
 					if kinds.include?(parent.kind)
 						result << parent
 					end
+					parent = parent.semantic_parent
 				end
 				result
 			end
@@ -605,20 +640,9 @@ module FFI
 			end
 			
 			# Get all cursors that this cursor overrides.
-			# @returns [Array(Cursor)] Array of overridden cursors.
+			# @returns [OverriddenCursors] Collection of overridden cursors.
 			def overriddens
-				cursor_ptr = FFI::MemoryPointer.new :pointer
-				num_ptr = FFI::MemoryPointer.new :uint
-				Lib.get_overridden_cursors(@cursor, cursor_ptr, num_ptr)
-				num = num_ptr.get_uint(0)
-				cur_ptr = cursor_ptr.get_pointer(0)
-				
-				overriddens = []
-				num.times {overriddens << Cursor.new(cur_ptr, @translation_unit)
-															cur_ptr += Lib::CXCursor.size
-				}
-				Lib.dispose_overridden_cursors(cursor_ptr.get_pointer(0)) if num != 0
-				overriddens
+				OverriddenCursors.new(@cursor, @translation_unit)
 			end
 			
 			# Check if this cursor represents a bitfield.

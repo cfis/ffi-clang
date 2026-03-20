@@ -7,6 +7,12 @@
 describe File do
 	let(:file_list) {Index.new.parse_translation_unit(fixture_path("list.c")).file(fixture_path("list.c"))}
 	let(:file_docs) {Index.new.parse_translation_unit(fixture_path("docs.c")).file(fixture_path("docs.h"))}
+	let(:file_includes) {Index.new.parse_translation_unit(fixture_path("includes.c"), [], [], [:detailed_preprocessing_record]).file(fixture_path("includes.c"))}
+	let(:unsaved_contents) {"int main(void) {\n\treturn 42;\n}\n"}
+	let(:unsaved_translation_unit) {Index.new.parse_translation_unit("a.c", nil, [UnsavedFile.new("a.c", unsaved_contents)])}
+	let(:unsaved_file) {unsaved_translation_unit.file("a.c")}
+	let(:docs_header_path) {fixture_path("docs.h").tr("\\", "/")}
+	let(:extra_header_path) {fixture_path("extra.h").tr("\\", "/")}
 	
 	it "can be obtained from a translation unit" do
 		expect(file_list).to be_kind_of(FFI::Clang::File)
@@ -27,6 +33,16 @@ describe File do
 		it "returns its file name" do
 			expect(name).to be_kind_of(String)
 			expect(name).to eq(fixture_path("list.c"))
+		end
+	end
+	
+	describe "#contents" do
+		it "returns the loaded file contents" do
+			expect(file_list.contents).to eq(::File.binread(fixture_path("list.c")))
+		end
+		
+		it "returns unsaved file contents from the translation unit" do
+			expect(unsaved_file.contents).to eq(unsaved_contents)
 		end
 	end
 	
@@ -63,6 +79,40 @@ describe File do
 	describe "#modification" do
 		it "returns modification time as Time from CXFileUniqueID" do
 			expect(file_list.modification).to be_kind_of(Time)
+		end
+	end
+	
+	describe "#find_includes" do
+		it "returns an Enumerator if no block is given" do
+			enumerator = file_includes.find_includes
+			included_files = enumerator.map {|cursor, range| cursor.included_file.name.tr("\\", "/")}
+			
+			expect(enumerator).to be_kind_of(Enumerator)
+			expect(included_files).to eq([docs_header_path, extra_header_path])
+		end
+		
+		it "visits include directives in order" do
+			visited = []
+			
+			file_includes.find_includes do |cursor, range|
+				visited << [cursor.kind, cursor.included_file.name.tr("\\", "/"), range.start.line, range.start.column]
+			end
+			
+			expect(visited).to eq([
+				[:cursor_inclusion_directive, docs_header_path, 1, 1],
+				[:cursor_inclusion_directive, extra_header_path, 2, 1],
+			])
+		end
+		
+		it "supports :break to stop iteration early" do
+			visited = []
+			
+			file_includes.find_includes do |cursor, range|
+				visited << cursor.included_file.name.tr("\\", "/")
+				:break
+			end
+			
+			expect(visited).to eq([docs_header_path])
 		end
 	end
 end

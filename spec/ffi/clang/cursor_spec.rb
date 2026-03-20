@@ -11,6 +11,53 @@
 # Copyright, 2019, by Michael Metivier.
 # Copyright, 2023-2025, by Charlie Savage.
 
+describe FFI::Clang::Lib::CXCursor do
+	let(:cursor) {described_class.new}
+	
+	describe "cursor kind mapping" do
+		it "maps corrected expression kinds" do
+			cursor[:kind] = 129
+			expect(cursor[:kind]).to eq(:cursor_cxx_typeid_expr)
+			
+			cursor[:kind] = 152
+			expect(cursor[:kind]).to eq(:cursor_cxx_addrspace_cast_expr)
+			
+			cursor[:kind] = 156
+			expect(cursor[:kind]).to eq(:cursor_pack_indexing_expr)
+		end
+		
+		it "maps newly added statement kinds" do
+			cursor[:kind] = 288
+			expect(cursor[:kind]).to eq(:cursor_omp_tile_directive)
+			
+			cursor[:kind] = 300
+			expect(cursor[:kind]).to eq(:cursor_omp_parallel_masked_directive)
+			
+			cursor[:kind] = 333
+			expect(cursor[:kind]).to eq(:cursor_open_acc_cache_construct)
+		end
+		
+		it "maps newly added extra declaration kinds" do
+			cursor[:kind] = 604
+			expect(cursor[:kind]).to eq(:cursor_concept_decl)
+		end
+	end
+end
+
+describe "availability kind mapping" do
+	let(:availability_value_class) do
+		Class.new(FFI::Struct) do
+			layout :value, FFI::Clang::Lib.find_type(:availability)
+		end
+	end
+	let(:availability_value) {availability_value_class.new}
+	
+	it "maps the corrected accessibility symbol" do
+		availability_value[:value] = 3
+		expect(availability_value[:value]).to eq(:not_accessible)
+	end
+end
+
 describe "Function Call Cursors" do
 	let(:translation_unit) {Index.new.parse_translation_unit(fixture_path("class.cpp"))}
 	let(:cursor) {translation_unit.cursor}
@@ -104,6 +151,8 @@ describe Cursor do
 	let(:cursor_pp) {Index.new.parse_translation_unit(fixture_path("docs.c"),[],[],[:detailed_preprocessing_record]).cursor}
 	let(:cursor_forward) {Index.new.parse_translation_unit(fixture_path("forward.h")).cursor}
 	let(:cursor_anonymous) {Index.new.parse_translation_unit(fixture_path("anonymous.h")).cursor}
+	let(:cursor_apis) {Index.new.parse_translation_unit(fixture_path("cursor_apis.cpp")).cursor}
+	let(:cursor_templates) {Index.new.parse_translation_unit(fixture_path("cursor_templates.cpp")).cursor}
 	
 	it "can be obtained from a translation unit" do
 		expect(cursor).to be_kind_of(Cursor)
@@ -415,6 +464,58 @@ describe Cursor do
 		end
 	end
 	
+	describe "#has_global_storage?" do
+		let(:extern_var) do
+			find_matching(cursor_apis) do |child, parent|
+				child.kind == :cursor_variable and child.spelling == "extern_var"
+			end
+		end
+		
+		let(:static_var) do
+			find_matching(cursor_apis) do |child, parent|
+				child.kind == :cursor_variable and child.spelling == "static_var"
+			end
+		end
+		
+		let(:global_var) do
+			find_matching(cursor_apis) do |child, parent|
+				child.kind == :cursor_variable and child.spelling == "global_var"
+			end
+		end
+		
+		it "returns true for file-scope variable declarations" do
+			expect(extern_var.has_global_storage?).to be true
+			expect(static_var.has_global_storage?).to be true
+			expect(global_var.has_global_storage?).to be true
+		end
+	end
+	
+	describe "#has_external_storage?" do
+		let(:extern_var) do
+			find_matching(cursor_apis) do |child, parent|
+				child.kind == :cursor_variable and child.spelling == "extern_var"
+			end
+		end
+		
+		let(:static_var) do
+			find_matching(cursor_apis) do |child, parent|
+				child.kind == :cursor_variable and child.spelling == "static_var"
+			end
+		end
+		
+		let(:global_var) do
+			find_matching(cursor_apis) do |child, parent|
+				child.kind == :cursor_variable and child.spelling == "global_var"
+			end
+		end
+		
+		it "distinguishes external storage from other file-scope storage" do
+			expect(extern_var.has_external_storage?).to be true
+			expect(static_var.has_external_storage?).to be false
+			expect(global_var.has_external_storage?).to be false
+		end
+	end
+	
 	describe "#specialized_template" do # looks not working on 3.2
 		let(:cursor_function) do
 			find_matching(cursor_cxx) do |child, parent|
@@ -466,6 +567,111 @@ describe Cursor do
 		it "returns the cursor kind of the specializations would be generated" do
 			expect(template.template_kind).to be_kind_of(Symbol)
 			expect(template.template_kind).to be(:cursor_function)
+		end
+	end
+	
+	describe "#num_template_arguments" do
+		let(:specialized_struct) do
+			find_matching(cursor_templates) do |child, parent|
+				child.kind == :cursor_struct and child.display_name == "MixedArgs<float, -7, true>"
+			end
+		end
+		
+		let(:non_template_struct) do
+			find_matching(cursor_cxx) do |child, parent|
+				child.kind == :cursor_struct and child.spelling == "A"
+			end
+		end
+		
+		it "returns the number of template arguments for a specialization cursor" do
+			expect(specialized_struct.num_template_arguments).to eq(3)
+		end
+		
+		it "returns -1 for a non-template cursor" do
+			expect(non_template_struct.num_template_arguments).to eq(-1)
+		end
+	end
+	
+	describe "#template_argument_kind" do
+		let(:specialized_struct) do
+			find_matching(cursor_templates) do |child, parent|
+				child.kind == :cursor_struct and child.display_name == "MixedArgs<float, -7, true>"
+			end
+		end
+		
+		it "returns the kind for each template argument" do
+			expect(specialized_struct.template_argument_kind(0)).to eq(:template_argument_type)
+			expect(specialized_struct.template_argument_kind(1)).to eq(:template_argument_integral)
+			expect(specialized_struct.template_argument_kind(2)).to eq(:template_argument_integral)
+		end
+	end
+	
+	describe "#template_argument_type" do
+		let(:specialized_struct) do
+			find_matching(cursor_templates) do |child, parent|
+				child.kind == :cursor_struct and child.display_name == "MixedArgs<float, -7, true>"
+			end
+		end
+		
+		let(:specialized_function) do
+			find_matching(cursor_templates) do |child, parent|
+				child.kind == :cursor_function and child.spelling == "specialized_func"
+			end
+		end
+		
+		it "returns the type template argument for a class specialization" do
+			arg_type = specialized_struct.template_argument_type(0)
+			expect(arg_type).to be_kind_of(Types::Type)
+			expect(arg_type.kind).to eq(:type_float)
+		end
+		
+		it "returns the type template argument for a function specialization" do
+			arg_type = specialized_function.template_argument_type(0)
+			expect(arg_type).to be_kind_of(Types::Type)
+			expect(arg_type.kind).to eq(:type_double)
+		end
+	end
+	
+	describe "#template_argument_value" do
+		let(:specialized_struct) do
+			find_matching(cursor_templates) do |child, parent|
+				child.kind == :cursor_struct and child.display_name == "MixedArgs<float, -7, true>"
+			end
+		end
+		
+		let(:specialized_function) do
+			find_matching(cursor_templates) do |child, parent|
+				child.kind == :cursor_function and child.spelling == "specialized_func"
+			end
+		end
+		
+		it "returns signed integral template argument values" do
+			expect(specialized_struct.template_argument_value(1)).to eq(-7)
+		end
+		
+		it "returns signed integral values for function specializations" do
+			expect(specialized_function.template_argument_value(1)).to eq(42)
+			expect(specialized_function.template_argument_value(2)).to eq(0)
+		end
+	end
+	
+	describe "#template_argument_unsigned_value" do
+		let(:unsigned_specialization) do
+			find_matching(cursor_templates) do |child, parent|
+				child.kind == :cursor_struct and child.display_name == "UnsignedArg<2147483649ULL>"
+			end
+		end
+		
+		it "returns unsigned integral template argument values" do
+			expect(unsigned_specialization.template_argument_unsigned_value(0)).to eq(2_147_483_649)
+		end
+		
+		it "returns unsigned values for boolean template arguments" do
+			specialized_struct = find_matching(cursor_templates) do |child, parent|
+				child.kind == :cursor_struct and child.display_name == "MixedArgs<float, -7, true>"
+			end
+			
+			expect(specialized_struct.template_argument_unsigned_value(2)).to eq(1)
 		end
 	end
 	
@@ -793,10 +999,33 @@ describe Cursor do
 			end
 		end
 		
-		it "returns the set of methods which are overridden by this cursor method" do
-			expect(override_cursor.overriddens).to be_kind_of(Array)
-			expect(override_cursor.overriddens.size).to eq(2)
-			expect(override_cursor.overriddens.map{|cur| cur.semantic_parent.spelling}).to eq(["B", "C"])
+		it "returns an OverriddenCursors collection" do
+			overriddens = override_cursor.overriddens
+			expect(overriddens).to be_kind_of(Cursor::OverriddenCursors)
+			expect(overriddens.size).to eq(2)
+			expect(overriddens.map{|cur| cur.semantic_parent.spelling}).to eq(["B", "C"])
+		end
+		
+		it "#each returns an Enumerator if no block is given" do
+			enumerator = override_cursor.overriddens.each
+			expect(enumerator).to be_kind_of(Enumerator)
+			expect(enumerator.to_a.size).to eq(2)
+		end
+		
+		it "returns empty collection for non-overriding methods" do
+			non_override = find_matching(cursor_cxx) do |child, parent|
+				child.kind == :cursor_cxx_method and child.spelling == "func_a" and parent.spelling == "A"
+			end
+			overriddens = non_override.overriddens
+			expect(overriddens.size).to eq(0)
+			expect(overriddens.to_a).to eq([])
+		end
+		
+		it "cursors remain valid after iteration" do
+			overriddens = override_cursor.overriddens
+			cursors = overriddens.to_a
+			expect(cursors[0].semantic_parent.spelling).to eq("B")
+			expect(cursors[1].semantic_parent.spelling).to eq("C")
 		end
 	end
 	
@@ -1361,6 +1590,14 @@ describe FFI::Clang::Cursor do
 		it "returns empty array when no ancestors match" do
 			ancestors = method_cursor.ancestors_by_kind(:cursor_namespace)
 			expect(ancestors).to eq([])
+		end
+		
+		it "finds ancestors at multiple levels" do
+			nested = find_matching(cursor_cxx) do |child, parent|
+				child.spelling == "Nested" and parent.spelling == "Inner"
+			end
+			ancestors = nested.ancestors_by_kind(:cursor_namespace)
+			expect(ancestors.map(&:spelling)).to eq(["Inner", "Outer"])
 		end
 	end
 	
