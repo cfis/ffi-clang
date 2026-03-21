@@ -19,6 +19,28 @@ module FFI
 				SourceRange.new Lib.get_null_range
 			end
 			
+			# Build Ruby source ranges from a libclang source range list.
+			# The list is always disposed before returning.
+			# @parameter range_list [Lib::CXSourceRangeList | FFI::Pointer | Nil] The libclang range list.
+			# @returns [Array(SourceRange)] The extracted source ranges.
+			def self.from_source_range_list(range_list)
+				return [] if range_list.nil?
+				
+				range_list = Lib::CXSourceRangeList.new(range_list) if range_list.is_a?(FFI::Pointer)
+				return [] if range_list.pointer.null?
+				
+				begin
+					range_pointer = range_list[:ranges]
+					
+					range_list[:count].times.map do |i|
+						range = Lib::CXSourceRange.new(range_pointer + (i * Lib::CXSourceRange.size))
+						SourceRange.new(Lib.get_range(Lib.get_range_start(range), Lib.get_range_end(range)))
+					end
+				ensure
+					Lib.dispose_source_range_list(range_list)
+				end
+			end
+			
 			# Initialize a source range.
 			# @parameter range_or_begin_location [Lib::CXSourceRange | SourceLocation] Either a range structure or the beginning location.
 			# @parameter end_location [SourceLocation | Nil] The end location, or `nil` if first parameter is a range.

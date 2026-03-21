@@ -63,6 +63,47 @@ describe TranslationUnit do
 		end
 	end
 	
+	describe "#skipped_ranges" do
+		let(:translation_unit) {Index.new.parse_translation_unit(fixture_path("skipped_ranges.c"), nil, [], [:detailed_preprocessing_record])}
+		let(:source_file) {translation_unit.file(fixture_path("skipped_ranges.c"))}
+		let(:header_file) {translation_unit.file(fixture_path("skipped_ranges.h"))}
+		
+		it "returns skipped preprocessor ranges for a file" do
+			ranges = translation_unit.skipped_ranges(source_file)
+			
+			expect(ranges.length).to eq(1)
+			expect(ranges.first).to be_kind_of(SourceRange)
+			expect(ranges.first.text).to include("skipped_in_source")
+		end
+		
+		it "returns skipped preprocessor ranges for an included header" do
+			ranges = translation_unit.skipped_ranges(header_file)
+			
+			expect(ranges.length).to eq(1)
+			expect(ranges.first.text).to include("skipped_in_header")
+		end
+	end
+	
+	describe "#all_skipped_ranges" do
+		let(:translation_unit) {Index.new.parse_translation_unit(fixture_path("skipped_ranges.c"), nil, [], [:detailed_preprocessing_record])}
+		
+		it "returns skipped preprocessor ranges across all files" do
+			ranges = translation_unit.all_skipped_ranges
+			text = ranges.map(&:text).join("\n")
+			
+			expect(ranges.length).to eq(2)
+			expect(ranges).to all(be_kind_of(SourceRange))
+			expect(text).to include("skipped_in_source")
+			expect(text).to include("skipped_in_header")
+		end
+		
+		it "disposes the skipped range list after extracting the ranges" do
+			expect(Lib).to receive(:dispose_source_range_list).and_call_original
+			
+			translation_unit.all_skipped_ranges
+		end
+	end
+	
 	describe "#location" do
 		let(:file) {translation_unit.file(fixture_path("a.c"))}
 		let(:column) {12}

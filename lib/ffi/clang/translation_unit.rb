@@ -134,6 +134,19 @@ module FFI
 				end
 			end
 			
+			# Get skipped preprocessor ranges for a file in this translation unit.
+			# @parameter file [File] The file to inspect.
+			# @returns [Array(SourceRange)] The skipped preprocessor ranges in the file.
+			def skipped_ranges(file)
+				SourceRange.from_source_range_list(Lib.get_skipped_ranges(self, file))
+			end
+			
+			# Get all skipped preprocessor ranges in this translation unit.
+			# @returns [Array(SourceRange)] The skipped preprocessor ranges across all files.
+			def all_skipped_ranges
+				SourceRange.from_source_range_list(Lib.get_all_skipped_ranges(self))
+			end
+			
 			# Get the spelling (filename) of this translation unit.
 			# @returns [String] The filename of the translation unit.
 			def spelling
