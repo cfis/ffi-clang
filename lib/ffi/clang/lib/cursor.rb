@@ -16,6 +16,7 @@
 require_relative "translation_unit"
 require_relative "diagnostic"
 require_relative "comment"
+require_relative "string"
 require_relative "type"
 
 module FFI
@@ -626,6 +627,7 @@ module FFI
 			attach_function :cursor_has_var_decl_external_storage, :clang_Cursor_hasVarDeclExternalStorage, [CXCursor.by_value], :int
 			attach_function :cursor_is_inline_namespace, :clang_Cursor_isInlineNamespace, [CXCursor.by_value], :uint
 			attach_function :cursor_get_mangling, :clang_Cursor_getMangling, [CXCursor.by_value], CXString.by_value
+			attach_function :cursor_get_cxx_manglings, :clang_Cursor_getCXXManglings, [CXCursor.by_value], CXStringSet.by_ref
 			attach_function :cursor_get_offset_of_field, :clang_Cursor_getOffsetOfField, [CXCursor.by_value], :long_long
 			attach_function :cursor_get_brief_comment_text, :clang_Cursor_getBriefCommentText, [CXCursor.by_value], CXString.by_value
 			attach_function :cursor_get_spelling_name_range, :clang_Cursor_getSpellingNameRange, [CXCursor.by_value, :uint, :uint], CXSourceRange.by_value
