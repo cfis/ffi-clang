@@ -224,6 +224,26 @@ describe TranslationUnit do
 			expect(find_by_kind(@reparse_translation_unit.cursor, :cursor_variable).spelling).to eq("a")
 		end
 		
+		it "uses libclang's default reparse options when options are not provided" do
+			default_reparse_options = Lib.default_reparse_options(@reparse_translation_unit)
+			expect(Lib).to receive(:default_reparse_options).with(@reparse_translation_unit).and_return(default_reparse_options)
+			expect(Lib).to receive(:reparse_translation_unit).with(@reparse_translation_unit, 0, nil, default_reparse_options).and_return(0)
+			
+			expect{@reparse_translation_unit.reparse}.not_to raise_error
+		end
+		
+		it "passes explicit reparse options through to libclang" do
+			explicit_reparse_options = Lib.bitmask_from(Lib::ReparseFlags, [:none])
+			expect(Lib).to receive(:bitmask_from).with(Lib::ReparseFlags, [:none]).and_return(explicit_reparse_options)
+			expect(Lib).to receive(:reparse_translation_unit).with(@reparse_translation_unit, 0, nil, explicit_reparse_options).and_return(0)
+			
+			expect{@reparse_translation_unit.reparse([], [:none])}.not_to raise_error
+		end
+		
+		it "raises exception if a reparse option is invalid" do
+			expect{@reparse_translation_unit.reparse([], [:not_a_real_flag])}.to raise_error(FFI::Clang::Error)
+		end
+		
 		it "raises exception if the file is not found when reparsing" do
 			FileUtils.rm path, :force => true
 			expect{@reparse_translation_unit.reparse}.to raise_error(FFI::Clang::Error)
