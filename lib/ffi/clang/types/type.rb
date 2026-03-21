@@ -206,17 +206,58 @@ module FFI
 					Lib.extract_string Lib.get_fully_qualified_name(@type, policy, with_global_ns_prefix ? 1 : 0)
 				end
 				
+				# Visit all base classes of a C++ record type.
+				# @yields {|cursor| ...} Each base class cursor.
+				# 	@parameter cursor [Cursor] The base class cursor.
+				# @returns [Enumerator] If no block is given.
+				# @returns [self] The receiver.
+				def visit_base_classes(&block)
+					return to_enum(__method__) unless block_given?
+					
+					visit_type(:visit_cxx_base_classes, &block)
+				end
+				
+				# Visit all methods of a C++ record type.
+				# @yields {|cursor| ...} Each method cursor.
+				# 	@parameter cursor [Cursor] The method cursor.
+				# @returns [Enumerator] If no block is given.
+				# @returns [self] The receiver.
+				def visit_methods(&block)
+					return to_enum(__method__) unless block_given?
+					
+					visit_type(:visit_cxx_methods, &block)
+				end
+				
 				# Visit all fields of a record type.
 				# @yields {|cursor| ...} Each field cursor.
 				# 	@parameter cursor [Cursor] The field cursor.
-				# @returns [Boolean] True if visitation completed, false if it was aborted.
+				# @returns [Enumerator] If no block is given.
+				# @returns [self] The receiver.
 				def visit_fields(&block)
+					return to_enum(__method__) unless block_given?
+					
+					visit_type(:type_visit_fields, &block)
+				end
+				
+				private
+				
+				# Visit a type using a libclang visitor function.
+				# The C API documents a non-zero return on early termination,
+				# but in practice (libclang 21.1.7) it returns 1 in both cases,
+				# so ffi-clang treats these as side-effect iterators and returns self.
+				# @parameter function_name [Symbol] The Lib function to invoke.
+				# @yields {|cursor| ...} Each visited cursor.
+				# @returns [self] The receiver.
+				def visit_type(function_name, &block)
 					callback = Proc.new do |cursor, _data|
 						result = block.call(Cursor.new(cursor, @translation_unit))
 						result == :break ? 0 : 1
 					end
-					Lib.type_visit_fields(@type, callback, nil) != 0
+					Lib.send(function_name, @type, callback, nil)
+					self
 				end
+				
+				public
 				
 				# Compare this type with another for equality.
 				# @parameter other [Type] The other type to compare.

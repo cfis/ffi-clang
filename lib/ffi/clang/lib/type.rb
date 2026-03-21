@@ -263,6 +263,7 @@ module FFI
 			attach_function :type_get_nullability, :clang_Type_getNullability, [CXType.by_value], :int
 			attach_function :type_get_modified_type, :clang_Type_getModifiedType, [CXType.by_value], CXType.by_value
 			attach_function :type_get_value_type, :clang_Type_getValueType, [CXType.by_value], CXType.by_value
+			
 		end
 	end
 end
