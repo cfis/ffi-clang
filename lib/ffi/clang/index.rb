@@ -21,25 +21,49 @@ module FFI
 			include InvocationSupport
 			
 			# Initialize a new index for managing translation units.
-			# @parameter exclude_declarations [Boolean] Whether to exclude declarations from PCH.
+			# @parameter exclude_declarations_from_pch [Boolean] Whether to exclude declarations from PCH.
 			# @parameter display_diagnostics [Boolean] Whether to display diagnostics during parsing.
-			def initialize(exclude_declarations = true, display_diagnostics = false)
-				super Lib.create_index(exclude_declarations ? 1 : 0, display_diagnostics ? 1 : 0)
-			end
-			
-			# Create a new index with extended options (clang 17+).
-			# @parameter options [Lib::CXIndexOptions] The index options struct.
-			# @returns [Index] A new index instance.
-			def self.create_with_options(options)
-				instance = allocate
-				FFI::AutoPointer.instance_method(:initialize).bind_call(instance, Lib.create_index_with_options(options))
-				instance
+			# @parameter store_preambles_in_memory [Boolean] Whether to store preambles in memory.
+			# @parameter thread_background_priority_for_indexing [Symbol] The indexing background priority choice.
+			# @parameter thread_background_priority_for_editing [Symbol] The editing background priority choice.
+			# @parameter preamble_storage_path [String | Nil] The directory where preambles should be stored.
+			# @parameter invocation_emission_path [String | Nil] The directory where invocation files should be emitted.
+			# @raises [NotImplementedError] If Clang 17.0.0+ options are requested on an older libclang.
+			def initialize(
+				exclude_declarations_from_pch: true,
+				display_diagnostics: false,
+				store_preambles_in_memory: false,
+				thread_background_priority_for_indexing: :default,
+				thread_background_priority_for_editing: :default,
+				preamble_storage_path: nil,
+				invocation_emission_path: nil
+			)
+				pointer = create_index_pointer(exclude_declarations_from_pch:, display_diagnostics:, store_preambles_in_memory:, thread_background_priority_for_indexing:, thread_background_priority_for_editing:, preamble_storage_path:, invocation_emission_path:)
+				super pointer
 			end
 			
 			# Release the index pointer.
 			# @parameter pointer [FFI::Pointer] The index pointer to release.
 			def self.release(pointer)
 				Lib.dispose_index(pointer)
+			end
+			
+			# Get the global index options.
+			# @returns [Array(Symbol)] The enabled global option flags.
+			def global_options
+				Lib.opts_from(Lib::GlobalOptFlags, Lib.get_global_options(self))
+			end
+			
+			# Set the global index options.
+			# @parameter options [Array(Symbol)] The global option flags to enable.
+			def global_options=(options)
+				Lib.set_global_options(self, Lib.bitmask_from(Lib::GlobalOptFlags, options))
+			end
+			
+			# Set the invocation emission path for this index.
+			# @parameter path [String] The directory path where invocation files should be emitted.
+			def invocation_emission_path=(path)
+				Lib.set_invocation_emission_path_option(self, path)
 			end
 			
 			# Parse a source file and create a translation unit.
@@ -156,6 +180,94 @@ module FFI
 			end
 			
 			private
+			
+			# Create the native index pointer using the best available libclang API.
+			# @parameter exclude_declarations_from_pch [Boolean] Whether to exclude declarations from PCH.
+			# @parameter display_diagnostics [Boolean] Whether to display diagnostics during parsing.
+			# @parameter store_preambles_in_memory [Boolean] Whether to store preambles in memory.
+			# @parameter thread_background_priority_for_indexing [Symbol] The indexing background priority choice.
+			# @parameter thread_background_priority_for_editing [Symbol] The editing background priority choice.
+			# @parameter preamble_storage_path [String | Nil] The directory where preambles should be stored.
+			# @parameter invocation_emission_path [String | Nil] The directory where invocation files should be emitted.
+			# @returns [FFI::Pointer] The native index pointer.
+			# @raises [NotImplementedError] If Clang 17.0.0+ options are requested on an older libclang.
+			def create_index_pointer(
+				exclude_declarations_from_pch:,
+				display_diagnostics:,
+				store_preambles_in_memory:,
+				thread_background_priority_for_indexing:,
+				thread_background_priority_for_editing:,
+				preamble_storage_path:,
+				invocation_emission_path:
+			)
+				if extended_index_options_supported?
+					index_options = build_index_options(
+						exclude_declarations_from_pch: exclude_declarations_from_pch,
+						display_diagnostics: display_diagnostics,
+						store_preambles_in_memory: store_preambles_in_memory,
+						thread_background_priority_for_indexing: thread_background_priority_for_indexing,
+						thread_background_priority_for_editing: thread_background_priority_for_editing,
+						preamble_storage_path: preamble_storage_path,
+						invocation_emission_path: invocation_emission_path
+					)
+					
+					Lib.create_index_with_options(index_options)
+				else
+					raise NotImplementedError, "store_preambles_in_memory requires Clang 17.0.0+" if store_preambles_in_memory
+					raise NotImplementedError, "preamble_storage_path requires Clang 17.0.0+" if preamble_storage_path
+					
+					pointer = Lib.create_index(exclude_declarations_from_pch ? 1 : 0, display_diagnostics ? 1 : 0)
+					apply_global_option_choices(pointer, thread_background_priority_for_indexing, thread_background_priority_for_editing)
+					Lib.set_invocation_emission_path_option(pointer, invocation_emission_path) if invocation_emission_path
+					pointer
+				end
+			end
+			
+			# Check whether clang_createIndexWithOptions is available.
+			# @returns [Boolean] True if extended index options are supported.
+			def extended_index_options_supported?
+				defined?(Lib::CXIndexOptions) and Lib.respond_to?(:create_index_with_options)
+			end
+			
+			# Build a CXIndexOptions struct from keyword-style index options.
+			# @parameter exclude_declarations_from_pch [Boolean] Whether to exclude declarations from PCH.
+			# @parameter display_diagnostics [Boolean] Whether to display diagnostics during parsing.
+			# @parameter store_preambles_in_memory [Boolean] Whether to store preambles in memory.
+			# @parameter thread_background_priority_for_indexing [Symbol] The indexing background priority choice.
+			# @parameter thread_background_priority_for_editing [Symbol] The editing background priority choice.
+			# @parameter preamble_storage_path [String | Nil] The directory where preambles should be stored.
+			# @parameter invocation_emission_path [String | Nil] The directory where invocation files should be emitted.
+			# @returns [Lib::CXIndexOptions] The populated options struct.
+			def build_index_options(
+				exclude_declarations_from_pch:,
+				display_diagnostics:,
+				store_preambles_in_memory:,
+				thread_background_priority_for_indexing:,
+				thread_background_priority_for_editing:,
+				preamble_storage_path:,
+				invocation_emission_path:
+			)
+				index_options = Lib::CXIndexOptions.new
+				index_options.exclude_declarations_from_pch = exclude_declarations_from_pch
+				index_options.display_diagnostics = display_diagnostics
+				index_options.store_preambles_in_memory = store_preambles_in_memory
+				index_options.thread_background_priority_for_indexing = thread_background_priority_for_indexing
+				index_options.thread_background_priority_for_editing = thread_background_priority_for_editing
+				index_options.preamble_storage_path = preamble_storage_path
+				index_options.invocation_emission_path = invocation_emission_path
+				index_options
+			end
+			
+			# Apply thread priority choices through the legacy global-options API.
+			# @parameter pointer [FFI::Pointer] The native index pointer.
+			# @parameter indexing [Symbol] The indexing background priority choice.
+			# @parameter editing [Symbol] The editing background priority choice.
+			def apply_global_option_choices(pointer, indexing, editing)
+				flags = []
+				flags << :thread_background_priority_for_indexing if indexing == :enabled
+				flags << :thread_background_priority_for_editing if editing == :enabled
+				Lib.set_global_options(pointer, Lib.bitmask_from(Lib::GlobalOptFlags, flags))
+			end
 			
 			# Parse a translation unit through a specific libclang entry point.
 			# @parameter function_name [Symbol] The low-level parse function to invoke.

@@ -899,6 +899,8 @@ module FFI
 			end
 			
 			# Get the C++ mangled symbols for a constructor or destructor cursor.
+			# The returned set may differ from {#mangling}, particularly for destructors
+			# where some ABIs expose multiple related symbols.
 			# @returns [StringSet] The mangled symbols.
 			def cxx_manglings
 				StringSet.new(Lib.cursor_get_cxx_manglings(@cursor))
