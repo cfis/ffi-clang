@@ -111,6 +111,10 @@ module FFI
 			attach_function :get_code_complete_get_container_usr, :clang_codeCompleteGetContainerUSR, [CXCodeCompleteResults.by_ref], CXString.by_value
 			attach_function :get_code_complete_get_objc_selector, :clang_codeCompleteGetObjCSelector, [CXCodeCompleteResults.by_ref], CXString.by_value
 			
+			# Fix-it functions
+			attach_function :get_completion_num_fix_its, :clang_getCompletionNumFixIts, [CXCodeCompleteResults.by_ref, :uint], :uint
+			attach_function :get_completion_fix_it, :clang_getCompletionFixIt, [CXCodeCompleteResults.by_ref, :uint, :uint, :pointer], CXString.by_value
+			
 			# Other functions
 			attach_function :code_complete_at, :clang_codeCompleteAt, [:CXTranslationUnit, :string, :uint, :uint, :pointer, :uint, :uint], CXCodeCompleteResults.by_ref
 			attach_function :dispose_code_complete_results, :clang_disposeCodeCompleteResults, [CXCodeCompleteResults.by_ref], :void

@@ -21,11 +21,18 @@ module FFI
 			class Results < FFI::AutoPointer
 				include Enumerable
 				
-				# @attribute [Integer] The number of completion results.
+				# @attribute [r] size
+				# 	@returns [Integer] The number of completion results.
 				attr_reader :size
 				
-				# @attribute [Array(Result)] The array of completion results.
+				# @attribute [r] results
+				# 	@returns [Array(Result)] The array of completion results.
 				attr_reader :results
+				
+				# @attribute [r] code_complete_results
+				# 	@returns [Lib::CXCodeCompleteResults] The underlying results structure.
+				# @private
+				attr_reader :code_complete_results
 				
 				# Initialize code completion results.
 				# @parameter code_complete_results [Lib::CXCodeCompleteResults] The completion results structure.
@@ -127,9 +134,11 @@ module FFI
 					@size = @code_complete_results[:num]
 					cur_ptr = @code_complete_results[:results]
 					@results = []
-					@size.times {@results << Result.new(Lib::CXCompletionResult.new(cur_ptr))
-																		cur_ptr += Lib::CXCompletionResult.size
-					}
+					@size.times do |i|
+						completion_result = Lib::CXCompletionResult.new(cur_ptr)
+						@results << Result.new(completion_result, self, i)
+						cur_ptr += Lib::CXCompletionResult.size
+					end
 				end
 			end
 			
@@ -137,8 +146,12 @@ module FFI
 			class Result
 				# Initialize a completion result.
 				# @parameter result [Lib::CXCompletionResult] The completion result structure.
-				def initialize(result)
+				# @parameter owner [Results | Nil] The owning Results object (prevents GC of the parent allocation).
+				# @parameter index [Integer | Nil] The index of this result in the parent.
+				def initialize(result, owner = nil, index = nil)
 					@result = result
+					@owner = owner
+					@index = index
 				end
 				
 				# Get the kind of completion.
@@ -153,10 +166,46 @@ module FFI
 					CodeCompletion::String.new @result[:string]
 				end
 				
+				# Get the number of fix-its required before this completion can be applied.
+				# @returns [Integer] The number of fix-its.
+				def num_fix_its
+					return 0 unless @owner
+					
+					Lib.get_completion_num_fix_its(@owner.code_complete_results, @index)
+				end
+				
+				# Get all fix-its for this completion result.
+				# @returns [Array(FixIt)] The fix-its.
+				def fix_its
+					num_fix_its.times.map do |i|
+						range_ptr = MemoryPointer.new(Lib::CXSourceRange, 1)
+						text = Lib.extract_string(Lib.get_completion_fix_it(@owner.code_complete_results, @index, i, range_ptr))
+						range = SourceRange.new(Lib::CXSourceRange.new(range_ptr))
+						FixIt.new(text, range)
+					end
+				end
+				
 				# Get a string representation of this result.
 				# @returns [String] The result as a string.
 				def inspect
 					"<#{kind.inspect} = #{string.inspect}>"
+				end
+			end
+			
+			# Represents a fix-it that must be applied before a completion can be inserted.
+			class FixIt
+				# @attribute [r] text
+				# 	@returns [String] The replacement text.
+				# @attribute [r] range
+				# 	@returns [SourceRange] The source range to replace.
+				attr_reader :text, :range
+				
+				# Initialize a fix-it.
+				# @parameter text [String] The replacement text.
+				# @parameter range [SourceRange] The source range to replace.
+				def initialize(text, range)
+					@text = text
+					@range = range
 				end
 			end
 			
