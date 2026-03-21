@@ -26,6 +26,57 @@ describe Index do
 		expect{index.free}.not_to raise_error
 	end
 	
+	describe "#initialize" do
+		it "accepts keyword options" do
+			idx = Index.new(
+				exclude_declarations_from_pch: true,
+				thread_background_priority_for_indexing: :enabled,
+				thread_background_priority_for_editing: :enabled,
+				invocation_emission_path: TMP_DIR
+			)
+			
+			expect(idx).to be_kind_of(Index)
+			expect(idx.global_options).to include(:thread_background_priority_for_indexing)
+			expect(idx.global_options).to include(:thread_background_priority_for_editing)
+		end
+		
+		it "raises on unknown keyword options" do
+			expect {Index.new(not_a_real_option: true)}.to raise_error(ArgumentError)
+		end
+	end
+	
+	describe "#global_options" do
+		it "returns the enabled global option flags" do
+			index.global_options = [:thread_background_priority_for_indexing, :thread_background_priority_for_editing]
+			
+			expect(index.global_options).to include(:thread_background_priority_for_indexing)
+			expect(index.global_options).to include(:thread_background_priority_for_editing)
+		end
+	end
+	
+	describe "#global_options=" do
+		it "applies global option flags to the index" do
+			index.global_options = [:thread_background_priority_for_indexing]
+			
+			bitmask = FFI::Clang::Lib.get_global_options(index)
+			flags = FFI::Clang::Lib.opts_from(FFI::Clang::Lib::GlobalOptFlags, bitmask)
+			
+			expect(flags).to eq([:thread_background_priority_for_indexing])
+		end
+		
+		it "raises on invalid global options" do
+			expect {index.global_options = [:not_a_real_option]}.to raise_error(FFI::Clang::Error)
+		end
+	end
+	
+	describe "#invocation_emission_path=" do
+		it "delegates to libclang" do
+			expect(Lib).to receive(:set_invocation_emission_path_option).with(index, TMP_DIR)
+			
+			index.invocation_emission_path = TMP_DIR
+		end
+	end
+	
 	describe "#parse_translation_unit" do
 		it "can parse a source file" do
 			translation_unit = index.parse_translation_unit fixture_path("a.c")
@@ -135,16 +186,10 @@ describe Index do
 		end
 	end
 	
-	describe ".create_with_options" do
-		it "creates an index with options and can parse a file" do
-			options = FFI::Clang::Lib::CXIndexOptions.new
-			options.exclude_declarations_from_pch = true
-			
-			idx = Index.create_with_options(options)
-			expect(idx).to be_kind_of(Index)
-			
-			tu = idx.parse_translation_unit(fixture_path("a.c"))
-			expect(tu).to be_kind_of(TranslationUnit)
-		end
+	it "creates an index and can parse a file" do
+		idx = Index.new(exclude_declarations_from_pch: true)
+		tu = idx.parse_translation_unit(fixture_path("a.c"))
+		
+		expect(tu).to be_kind_of(TranslationUnit)
 	end
 end

@@ -39,12 +39,13 @@ describe "Index bindings" do
 		options.thread_background_priority_for_indexing = :enabled
 		options.thread_background_priority_for_editing = :enabled
 		
-		index = Index.create_with_options(options)
+		index = FFI::Clang::Lib.create_index_with_options(options)
 		bitmask = FFI::Clang::Lib.get_global_options(index)
 		flags = FFI::Clang::Lib.opts_from(FFI::Clang::Lib::GlobalOptFlags, bitmask)
 		
 		expect(flags).to include(:thread_background_priority_for_indexing)
 		expect(flags).to include(:thread_background_priority_for_editing)
+		FFI::Clang::Lib.dispose_index(index)
 	end
 	
 	it "defines the IndexerCallbacks ABI and index action bindings" do

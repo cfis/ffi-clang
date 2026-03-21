@@ -9,6 +9,10 @@
   - Improve Windows MinGW support.
   - Work around LLVM bug [#154361](https://github.com/llvm/llvm-project/pull/171465) where `FreeLibrary` on `libclang.dll` crashes during process exit due to dangling Fiber Local Storage callbacks (fixed in LLVM 22.1.0).
 
+### Breaking Changes
+
+  - **Index**: `Index.new` now takes keyword options matching libclang's modern `CXIndexOptions` API rather than the old positional boolean constructor. The public `Index.create_with_options` wrapper has been removed; the wrapper surface is now `Index.new(...)`.
+
 ### Bug Fixes
 
   - Fix {ruby FFI::Clang::TranslationUnit\#default\_reparse\_options} calling wrong libclang function.
@@ -37,7 +41,7 @@
   - **DiagnosticSet**: New enumerable class returned by `Diagnostic#children`.
   - **EvalResult**: New class for compile-time constant evaluation — `as_double`, `as_int`, `as_long_long`, `as_str`, `as_unsigned`, `kind`, `unsigned_int?`.
   - **File**: `==`, `contents`, `find_includes`, `real_path_name`.
-  - **Index**: `create_translation_unit2`, `create_translation_unit_from_source_file`, `create_with_options` (clang 17+) with `CXChoice` enum and `CXIndexOptions` struct, `parse_translation_unit_with_invocation`.
+  - **Index**: `create_translation_unit2`, `create_translation_unit_from_source_file`, keyword-configurable `new` (clang 17+) backed by `CXChoice` and `CXIndexOptions`, `parse_translation_unit_with_invocation`.
   - **Token**: `from_location`.
   - **TranslationUnit**: `suspend`, `target_pointer_width`, `target_triple`.
   - **Type**: `address_space`, `fully_qualified_name` (clang 21+), `modified_type`, `nullability`, `pretty_printed` (clang 21+), `transparent_tag_typedef?`, `typedef_name`, `unqualified_type` (clang 16+), `value_type`, `visit_fields`.
