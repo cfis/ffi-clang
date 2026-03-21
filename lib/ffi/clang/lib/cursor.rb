@@ -540,7 +540,7 @@ module FFI
 			
 			callback :visit_fields_callback, [CXCursor.by_value, :pointer], :uint
 			attach_function :type_visit_fields, :clang_Type_visitFields, [CXType.by_value, :visit_fields_callback, :pointer], :uint
-
+			
 			if Clang.clang_version >= Gem::Version.new("21.0.0")
 				attach_function :visit_cxx_base_classes, :clang_visitCXXBaseClasses, [CXType.by_value, :visit_fields_callback, :pointer], :uint
 				attach_function :visit_cxx_methods, :clang_visitCXXMethods, [CXType.by_value, :visit_fields_callback, :pointer], :uint
