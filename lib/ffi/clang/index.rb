@@ -12,11 +12,14 @@
 
 require_relative "lib/index"
 require_relative "error"
+require_relative "invocation_support"
 
 module FFI
 	module Clang
 		# Represents a libclang index that manages translation units and provides a top-level context for parsing.
 		class Index < AutoPointer
+			include InvocationSupport
+			
 			# Initialize a new index for managing translation units.
 			# @parameter exclude_declarations [Boolean] Whether to exclude declarations from PCH.
 			# @parameter display_diagnostics [Boolean] Whether to display diagnostics during parsing.
@@ -98,31 +101,61 @@ module FFI
 				TranslationUnit.new translation_unit_pointer, self
 			end
 			
-			private
-			
-			# Convert command line arguments to a pointer array for libclang.
-			# @parameter command_line_args [Array(String)] The command line arguments.
-			# @returns [Array(FFI::MemoryPointer, Array(FFI::MemoryPointer))] The pointer array and string buffers that back it.
-			def args_pointer_from(command_line_args)
-				args_pointer = MemoryPointer.new(:pointer, command_line_args.length)
-				
-				strings = command_line_args.map do |arg|
-					MemoryPointer.from_string(arg.to_s)
-				end
-				
-				args_pointer.put_array_of_pointer(0, strings) unless strings.empty?
-				return args_pointer, strings
+			# Create a reusable indexing action for this index.
+			# @returns [IndexAction] The created index action.
+			def create_action
+				IndexAction.new(self)
 			end
 			
-			# Normalize command line arguments and inject libclang support flags.
+			# Index a source file using a temporary index action.
+			# @parameter source_file [String] The source file to index.
 			# @parameter command_line_args [Array(String) | String | Nil] Compiler arguments for parsing.
-			# @returns [Array(String)] The normalized compiler arguments.
-			def normalized_command_line_args(command_line_args)
-				command_line_args = Array(command_line_args)
+			# @parameter unsaved [Array(UnsavedFile)] Unsaved file buffers.
+			# @parameter index_opts [Array(Symbol)] Indexing options.
+			# @parameter translation_unit_opts [Array(Symbol)] Translation unit parsing options.
+			# @yields {|event, payload| ...} Each indexing event and its payload.
+			# 	@parameter event [Symbol] The event type.
+			# 	@parameter payload [Object] The event payload.
+			# @returns [Enumerator] If no block is given.
+			# @returns [TranslationUnit | Nil] The indexed translation unit, or nil if indexing was aborted.
+			def index_source_file(source_file, command_line_args = nil, unsaved = [], index_opts = [], translation_unit_opts = [], &block)
+				return to_enum(__method__, source_file, command_line_args, unsaved, index_opts, translation_unit_opts) unless block_given?
 				
-				# Inject -resource-dir if libclang can't find it on its own:
-				command_line_args + Lib.args.command_line_args(command_line_args)
+				create_action.index_source_file(source_file, command_line_args, unsaved, index_opts, translation_unit_opts, &block)
 			end
+			
+			# Index a source file using a full compiler command line and a temporary index action.
+			# @parameter source_file [String] The source file to index.
+			# @parameter command_line_args [Array(String) | String | Nil] Full compiler arguments including argv[0].
+			# @parameter unsaved [Array(UnsavedFile)] Unsaved file buffers.
+			# @parameter index_opts [Array(Symbol)] Indexing options.
+			# @parameter translation_unit_opts [Array(Symbol)] Translation unit parsing options.
+			# @yields {|event, payload| ...} Each indexing event and its payload.
+			# 	@parameter event [Symbol] The event type.
+			# 	@parameter payload [Object] The event payload.
+			# @returns [Enumerator] If no block is given.
+			# @returns [TranslationUnit | Nil] The indexed translation unit, or nil if indexing was aborted.
+			def index_source_file_with_invocation(source_file, command_line_args = nil, unsaved = [], index_opts = [], translation_unit_opts = [], &block)
+				return to_enum(__method__, source_file, command_line_args, unsaved, index_opts, translation_unit_opts) unless block_given?
+				
+				create_action.index_source_file_with_invocation(source_file, command_line_args, unsaved, index_opts, translation_unit_opts, &block)
+			end
+			
+			# Index an existing translation unit using a temporary index action.
+			# @parameter translation_unit [TranslationUnit] The translation unit to index.
+			# @parameter index_opts [Array(Symbol)] Indexing options.
+			# @yields {|event, payload| ...} Each indexing event and its payload.
+			# 	@parameter event [Symbol] The event type.
+			# 	@parameter payload [Object] The event payload.
+			# @returns [Enumerator] If no block is given.
+			# @returns [TranslationUnit | Nil] The translation unit, or nil if indexing was aborted.
+			def index_translation_unit(translation_unit, index_opts = [], &block)
+				return to_enum(__method__, translation_unit, index_opts) unless block_given?
+				
+				create_action.index_translation_unit(translation_unit, index_opts, &block)
+			end
+			
+			private
 			
 			# Parse a translation unit through a specific libclang entry point.
 			# @parameter function_name [Symbol] The low-level parse function to invoke.
@@ -138,15 +171,8 @@ module FFI
 				unsaved_files = UnsavedFile.unsaved_pointer_from(unsaved)
 				translation_unit_pointer_out = FFI::MemoryPointer.new(:pointer)
 				
-				error_code = Lib.send(function_name, self, source_file, args_pointer, command_line_args.size, unsaved_files, unsaved.length, options_bitmask_from(opts), translation_unit_pointer_out)
+				error_code = Lib.send(function_name, self, source_file, args_pointer, command_line_args.size, unsaved_files, unsaved.length, translation_unit_options_bitmask_from(opts), translation_unit_pointer_out)
 				translation_unit_from_error_code(error_code, source_file, translation_unit_pointer_out)
-			end
-			
-			# Convert options to a bitmask for libclang.
-			# @parameter opts [Array(Symbol)] The option flags.
-			# @returns [Integer] The bitmask representing the options.
-			def options_bitmask_from(opts)
-				Lib.bitmask_from(Lib::TranslationUnitFlags, opts)
 			end
 			
 			# Build a translation unit from a libclang error code and output pointer.
