@@ -98,6 +98,12 @@ describe File do
 		end
 	end
 	
+	describe "#real_path_name" do
+		it "returns the resolved path name for the file" do
+			expect(file_list.real_path_name.tr("\\", "/")).to eq(::File.realpath(fixture_path("list.c")).tr("\\", "/"))
+		end
+	end
+	
 	describe "#find_includes" do
 		it "returns an Enumerator if no block is given" do
 			enumerator = file_includes.find_includes

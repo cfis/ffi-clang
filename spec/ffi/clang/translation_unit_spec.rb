@@ -264,6 +264,12 @@ describe TranslationUnit do
 		end
 	end
 	
+	describe "#suspend" do
+		it "returns true when the translation unit is successfully suspended" do
+			expect(translation_unit.suspend).to be true
+		end
+	end
+	
 	describe "#resource_usage" do
 		let (:ru) {translation_unit.resource_usage}
 		it "returns ResourceUsage instance that represents memory usage of TU" do
