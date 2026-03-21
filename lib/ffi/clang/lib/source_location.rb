@@ -22,6 +22,10 @@ module FFI
 			attach_function :get_null_location, :clang_getNullLocation, [], CXSourceLocation.by_value
 			attach_function :equal_locations, :clang_equalLocations,  [CXSourceLocation.by_value, CXSourceLocation.by_value], :uint
 			
+			if Clang.clang_version >= Gem::Version.new("20.0.0")
+				attach_function :is_before_in_translation_unit, :clang_isBeforeInTranslationUnit, [CXSourceLocation.by_value, CXSourceLocation.by_value], :uint
+			end
+			
 			attach_function :get_location, :clang_getLocation, [:CXTranslationUnit, :CXFile, :uint, :uint], CXSourceLocation.by_value
 			attach_function :get_location_offset, :clang_getLocationForOffset, [:CXTranslationUnit, :CXFile, :uint], CXSourceLocation.by_value
 			attach_function :get_expansion_location, :clang_getExpansionLocation, [CXSourceLocation.by_value, :pointer, :pointer, :pointer, :pointer], :void

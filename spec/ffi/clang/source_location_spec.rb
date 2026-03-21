@@ -180,4 +180,64 @@ describe SourceLocation do
 		end
 	end
 	
+	describe "#<=>" do
+		let(:cursor_apis_tu) {Index.new.parse_translation_unit(fixture_path("cursor_apis.cpp"))}
+		let(:root) {cursor_apis_tu.cursor}
+		let(:first_func) do
+			find_matching(root) do |child, parent|
+				child.kind == :cursor_function and child.spelling == "inline_func"
+			end
+		end
+		let(:second_func) do
+			find_matching(root) do |child, parent|
+				child.kind == :cursor_function and child.spelling == "hidden_func"
+			end
+		end
+		
+		it "returns -1 when the first location comes before the second" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("20.0.0")
+			expect(first_func.location <=> second_func.location).to eq(-1)
+		end
+		
+		it "returns 1 when the first location comes after the second" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("20.0.0")
+			expect(second_func.location <=> first_func.location).to eq(1)
+		end
+		
+		it "returns 0 for equal locations" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("20.0.0")
+			expect(first_func.location <=> first_func.location).to eq(0)
+		end
+		
+		it "returns nil for non-SourceLocation objects" do
+			expect(first_func.location <=> "not a location").to be_nil
+		end
+		
+		it "supports Comparable operators" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("20.0.0")
+			expect(first_func.location < second_func.location).to be true
+			expect(second_func.location > first_func.location).to be true
+			expect(first_func.location <= first_func.location).to be true
+		end
+		
+		it "returns nil when comparing a null location" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("20.0.0")
+			null_loc = SourceLocation.null_location
+			expect(first_func.location <=> null_loc).to be_nil
+			expect(null_loc <=> first_func.location).to be_nil
+		end
+		
+		it "returns 0 when comparing two null locations" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("20.0.0")
+			expect(SourceLocation.null_location <=> SourceLocation.null_location).to eq(0)
+		end
+		
+		it "returns nil for locations from different translation units" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("20.0.0")
+			other_tu = Index.new.parse_translation_unit(fixture_path("list.c"))
+			other_func = find_by_kind(other_tu.cursor, :cursor_function)
+			expect(first_func.location <=> other_func.location).to be_nil
+		end
+	end
+	
 end

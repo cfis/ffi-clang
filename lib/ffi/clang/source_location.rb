@@ -17,6 +17,8 @@ module FFI
 		# This base class provides common functionality for source locations,
 		# with specific subclasses for different types of location information.
 		class SourceLocation
+			include Comparable
+			
 			# Get a null source location.
 			# @returns [ExpansionLocation] A null location that can be used for comparisons.
 			def self.null_location
@@ -56,6 +58,21 @@ module FFI
 			# @returns [Boolean] True if the locations are equal.
 			def ==(other)
 				Lib.equal_locations(@location, other.location) != 0
+			end
+			
+			# Compare this location with another for ordering.
+			# Returns nil for null locations or locations from different translation units,
+			# which causes Comparable operators (<, >, etc.) to raise ArgumentError.
+			# @parameter other [SourceLocation] The other location to compare.
+			# @returns [Integer | Nil] -1, 0, or 1 for ordering, or nil if not comparable.
+			def <=>(other)
+				return nil unless other.is_a?(SourceLocation)
+				return 0 if Lib.equal_locations(@location, other.location) != 0
+				return nil if null? || other.null?
+				return -1 if Lib.is_before_in_translation_unit(@location, other.location) != 0
+				return 1 if Lib.is_before_in_translation_unit(other.location, @location) != 0
+				
+				nil
 			end
 		end
 		
