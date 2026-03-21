@@ -82,6 +82,22 @@ describe File do
 		end
 	end
 	
+	describe "#skipped_ranges" do
+		let(:skipped_translation_unit) {Index.new.parse_translation_unit(fixture_path("skipped_ranges.c"), nil, [], [:detailed_preprocessing_record])}
+		let(:source_file) {skipped_translation_unit.file(fixture_path("skipped_ranges.c"))}
+		let(:header_file) {skipped_translation_unit.file(fixture_path("skipped_ranges.h"))}
+		
+		it "returns skipped preprocessor ranges for the file" do
+			expect(source_file.skipped_ranges.length).to eq(1)
+			expect(source_file.skipped_ranges.first.text).to include("skipped_in_source")
+		end
+		
+		it "delegates to the translation unit for included files" do
+			expect(header_file.skipped_ranges.length).to eq(1)
+			expect(header_file.skipped_ranges.first.text).to include("skipped_in_header")
+		end
+	end
+	
 	describe "#find_includes" do
 		it "returns an Enumerator if no block is given" do
 			enumerator = file_includes.find_includes

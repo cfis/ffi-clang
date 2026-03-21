@@ -81,6 +81,12 @@ module FFI
 				Time.at(@unique_id[:modification])
 			end
 			
+			# Get skipped preprocessor ranges for this file.
+			# @returns [Array(SourceRange)] The skipped preprocessor ranges in this file.
+			def skipped_ranges
+				@translation_unit.skipped_ranges(self)
+			end
+			
 			# Get the real (resolved) path name of this file.
 			# @returns [String] The real path name.
 			def real_path_name
