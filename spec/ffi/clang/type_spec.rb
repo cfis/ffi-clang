@@ -68,6 +68,7 @@ describe FFI::Clang::Types::Type do
 	let(:cursor_cxx) {Index.new.parse_translation_unit(fixture_path("test.cxx")).cursor}
 	let(:cursor_list) {Index.new.parse_translation_unit(fixture_path("list.c")).cursor}
 	let(:cursor_templates) {Index.new.parse_translation_unit(fixture_path("templates.hpp")).cursor}
+	let(:cursor_type_apis) {Index.new.parse_translation_unit(fixture_path("type_apis.c")).cursor}
 	let(:type) {find_by_kind(cursor, :cursor_function).type}
 	
 	it "can tell us about the main function" do
@@ -569,15 +570,96 @@ describe FFI::Clang::Types::Type do
 	end
 	
 	describe "#typedef_name" do
-		let(:cursor_apis) {Index.new.parse_translation_unit(fixture_path("cursor_apis.cpp"))}
-		let(:typedef_cursor) do
-			find_matching(cursor_apis.cursor) do |child, parent|
-				child.kind == :cursor_typedef_decl
+		let(:alias_typedef) do
+			find_matching(cursor_type_apis) do |child, parent|
+				child.kind == :cursor_typedef_decl and child.spelling == "AliasInt"
+			end
+		end
+		
+		let(:transparent_enum_typedef) do
+			find_matching(cursor_type_apis) do |child, parent|
+				child.kind == :cursor_typedef_decl and child.spelling == "TransparentEnum"
 			end
 		end
 		
 		it "returns the typedef name for typedef types" do
-			expect(typedef_cursor).to be_nil.or be_kind_of(FFI::Clang::Cursor)
+			expect(alias_typedef.type.typedef_name).to eq("AliasInt")
+			expect(transparent_enum_typedef.type.typedef_name).to eq("TransparentEnum")
+		end
+	end
+	
+	describe "#transparent_tag_typedef?" do
+		let(:alias_typedef) do
+			find_matching(cursor_type_apis) do |child, parent|
+				child.kind == :cursor_typedef_decl and child.spelling == "AliasInt"
+			end
+		end
+		
+		let(:transparent_enum_typedef) do
+			find_matching(cursor_type_apis) do |child, parent|
+				child.kind == :cursor_typedef_decl and child.spelling == "TransparentEnum"
+			end
+		end
+		
+		it "detects transparent tag typedefs" do
+			expect(transparent_enum_typedef.type.transparent_tag_typedef?).to be true
+			expect(alias_typedef.type.transparent_tag_typedef?).to be false
+		end
+	end
+	
+	describe "#nullability" do
+		let(:alias_typedef) do
+			find_matching(cursor_type_apis) do |child, parent|
+				child.kind == :cursor_typedef_decl and child.spelling == "AliasInt"
+			end
+		end
+		
+		it "returns invalid for types without nullability information" do
+			expect(alias_typedef.underlying_type.nullability).to eq(3)
+		end
+	end
+	
+	describe "#modified_type" do
+		let(:alias_typedef) do
+			find_matching(cursor_type_apis) do |child, parent|
+				child.kind == :cursor_typedef_decl and child.spelling == "AliasInt"
+			end
+		end
+		
+		it "returns an invalid type for non-attributed types" do
+			expect(alias_typedef.underlying_type.modified_type.kind).to eq(:type_invalid)
+		end
+	end
+	
+	describe "#value_type" do
+		let(:atomic_counter) do
+			find_matching(cursor_type_apis) do |child, parent|
+				child.kind == :cursor_variable and child.spelling == "atomic_counter"
+			end
+		end
+		
+		it "returns the value type of an atomic type" do
+			value_type = atomic_counter.type.value_type
+			expect(value_type).to be_kind_of(Types::Type)
+			expect(value_type.kind).to eq(:type_int)
+			expect(value_type.spelling).to eq("int")
+		end
+	end
+	
+	describe "#pretty_printed" do
+		let(:cursor_apis) {Index.new.parse_translation_unit(fixture_path("cursor_apis.cpp"))}
+		let(:my_struct) do
+			find_matching(cursor_apis.cursor) do |child, parent|
+				child.kind == :cursor_struct and child.spelling == "MyStruct"
+			end
+		end
+		
+		it "returns the pretty-printed type name" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("21.0.0")
+			policy = FFI::Clang::PrintingPolicy.new(my_struct.cursor)
+			name = my_struct.type.pretty_printed(policy)
+			expect(name).to include("MyNamespace")
+			expect(name).to include("MyStruct")
 		end
 	end
 	

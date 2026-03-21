@@ -45,6 +45,44 @@ describe Index do
 		end
 	end
 	
+	describe "#apply_global_option_choices" do
+		let(:raw_index) {FFI::Clang::Lib.create_index(1, 0)}
+		let(:helper) {Index.allocate}
+		
+		after do
+			FFI::Clang::Lib.dispose_index(raw_index)
+		end
+		
+		it "maps enabled choices to the global option flags" do
+			helper.send(:apply_global_option_choices, raw_index, :enabled, :default)
+			
+			bitmask = FFI::Clang::Lib.get_global_options(raw_index)
+			flags = FFI::Clang::Lib.opts_from(FFI::Clang::Lib::GlobalOptFlags, bitmask)
+			
+			expect(flags).to eq([:thread_background_priority_for_indexing])
+		end
+		
+		it "applies both global option flags when both choices are enabled" do
+			helper.send(:apply_global_option_choices, raw_index, :enabled, :enabled)
+			
+			bitmask = FFI::Clang::Lib.get_global_options(raw_index)
+			flags = FFI::Clang::Lib.opts_from(FFI::Clang::Lib::GlobalOptFlags, bitmask)
+			
+			expect(flags).to contain_exactly(
+				:thread_background_priority_for_indexing,
+				:thread_background_priority_for_editing
+			)
+		end
+		
+		it "clears the global option flags when both choices are disabled" do
+			helper.send(:apply_global_option_choices, raw_index, :enabled, :enabled)
+			
+			helper.send(:apply_global_option_choices, raw_index, :default, :default)
+			
+			expect(FFI::Clang::Lib.get_global_options(raw_index)).to eq(0)
+		end
+	end
+	
 	describe "#global_options" do
 		it "returns the enabled global option flags" do
 			index.global_options = [:thread_background_priority_for_indexing, :thread_background_priority_for_editing]
