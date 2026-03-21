@@ -462,6 +462,149 @@ describe FFI::Clang::Types::Type do
 		end
 	end
 	
+	describe "#visit_base_classes" do
+		let(:cursor_apis) {Index.new.parse_translation_unit(fixture_path("cursor_apis.cpp"))}
+		let(:derived_struct) do
+			find_matching(cursor_apis.cursor) do |child, parent|
+				child.kind == :cursor_struct and child.spelling == "Derived"
+			end
+		end
+		
+		it "visits all base classes" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("21.0.0")
+			bases = []
+			derived_struct.type.visit_base_classes do |base|
+				bases << base.spelling
+			end
+			expect(bases).to eq(["Base1", "Base2"])
+		end
+		
+		it "supports :break to stop early" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("21.0.0")
+			bases = []
+			derived_struct.type.visit_base_classes do |base|
+				bases << base.spelling
+				:break
+			end
+			expect(bases.length).to eq(1)
+		end
+		
+		it "returns an Enumerator when no block is given" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("21.0.0")
+			enumerator = derived_struct.type.visit_base_classes
+			expect(enumerator).to be_kind_of(Enumerator)
+			expect(enumerator.map(&:spelling)).to eq(["Base1", "Base2"])
+		end
+	end
+	
+	describe "#visit_methods" do
+		let(:cursor_apis) {Index.new.parse_translation_unit(fixture_path("cursor_apis.cpp"))}
+		let(:derived_struct) do
+			find_matching(cursor_apis.cursor) do |child, parent|
+				child.kind == :cursor_struct and child.spelling == "Derived"
+			end
+		end
+		
+		it "visits all methods of a class" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("21.0.0")
+			methods = []
+			derived_struct.type.visit_methods do |method|
+				methods << method.spelling
+			end
+			expect(methods).to include("derived_method", "another_method")
+		end
+		
+		it "supports :break to stop early" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("21.0.0")
+			methods = []
+			derived_struct.type.visit_methods do |method|
+				methods << method.spelling
+				:break
+			end
+			expect(methods.length).to eq(1)
+		end
+		
+		it "returns an Enumerator when no block is given" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("21.0.0")
+			enumerator = derived_struct.type.visit_methods
+			expect(enumerator).to be_kind_of(Enumerator)
+			expect(enumerator.map(&:spelling)).to include("derived_method", "another_method")
+		end
+	end
+	
+	describe "#visit_fields" do
+		let(:cursor_apis) {Index.new.parse_translation_unit(fixture_path("cursor_apis.cpp"))}
+		let(:field_struct) do
+			find_matching(cursor_apis.cursor) do |child, parent|
+				child.kind == :cursor_struct and child.spelling == "FieldStruct"
+			end
+		end
+		
+		it "visits all fields of a struct" do
+			fields = []
+			field_struct.type.visit_fields do |field|
+				fields << field.spelling
+			end
+			expect(fields).to eq(["field_a", "field_b", "field_c"])
+		end
+		
+		it "returns an Enumerator when no block is given" do
+			enumerator = field_struct.type.visit_fields
+			expect(enumerator).to be_kind_of(Enumerator)
+			expect(enumerator.map(&:spelling)).to eq(["field_a", "field_b", "field_c"])
+		end
+	end
+	
+	describe "#address_space" do
+		let(:cursor_apis) {Index.new.parse_translation_unit(fixture_path("cursor_apis.cpp"))}
+		let(:int_type) do
+			find_matching(cursor_apis.cursor) do |child, parent|
+				child.kind == :cursor_variable and child.spelling == "global_var"
+			end.type
+		end
+		
+		it "returns the address space" do
+			expect(int_type.address_space).to eq(0)
+		end
+	end
+	
+	describe "#typedef_name" do
+		let(:cursor_apis) {Index.new.parse_translation_unit(fixture_path("cursor_apis.cpp"))}
+		let(:typedef_cursor) do
+			find_matching(cursor_apis.cursor) do |child, parent|
+				child.kind == :cursor_typedef_decl
+			end
+		end
+		
+		it "returns the typedef name for typedef types" do
+			expect(typedef_cursor).to be_nil.or be_kind_of(FFI::Clang::Cursor)
+		end
+	end
+	
+	describe "#fully_qualified_name" do
+		let(:cursor_apis) {Index.new.parse_translation_unit(fixture_path("cursor_apis.cpp"))}
+		let(:my_struct) do
+			find_matching(cursor_apis.cursor) do |child, parent|
+				child.kind == :cursor_struct and child.spelling == "MyStruct"
+			end
+		end
+		
+		it "returns the fully qualified type name" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("21.0.0")
+			policy = FFI::Clang::PrintingPolicy.new(my_struct.cursor)
+			name = my_struct.type.fully_qualified_name(policy)
+			expect(name).to include("MyNamespace")
+			expect(name).to include("MyStruct")
+		end
+		
+		it "prepends :: with global ns prefix" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("21.0.0")
+			policy = FFI::Clang::PrintingPolicy.new(my_struct.cursor)
+			name = my_struct.type.fully_qualified_name(policy, with_global_ns_prefix: true)
+			expect(name).to start_with("::")
+		end
+	end
+	
 	describe "#num_template_arguments" do
 		let(:template_type) do
 			find_matching(cursor_templates) do |child, parent|
