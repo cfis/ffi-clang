@@ -126,10 +126,37 @@ describe CodeCompletion do
 			expect(result.kind).to be_kind_of(Symbol)
 		end
 		
+		it "#num_fix_its returns zero for normal completions" do
+			expect(result.num_fix_its).to eq(0)
+		end
+		
+		it "#fix_its returns an empty array for normal completions" do
+			expect(result.fix_its).to eq([])
+		end
+		
 		it "#inspect" do
 			str = result.inspect
 			expect(str).to be_kind_of(String)
 			expect(str).to include("<")
+		end
+	end
+	
+	describe "CodeCompletion::Result fix-its" do
+		let(:fixit_filename) {fixture_path("completion_fixit.cxx")}
+		let(:fixit_tu) {Index.new.parse_translation_unit(fixit_filename)}
+		let(:fixit_results) {fixit_tu.code_complete(fixit_filename, 9, 14, [], [:include_completions_with_fix_its])}
+		
+		it "returns fix-its for completions that require them" do
+			results_with_fixits = fixit_results.select {|r| r.num_fix_its > 0}
+			expect(results_with_fixits).not_to be_empty
+			
+			result = results_with_fixits.first
+			fix_its = result.fix_its
+			
+			expect(fix_its.length).to eq(1)
+			expect(fix_its.first).to be_kind_of(CodeCompletion::FixIt)
+			expect(fix_its.first.text).to eq("->")
+			expect(fix_its.first.range).to be_kind_of(SourceRange)
 		end
 	end
 	
