@@ -15,8 +15,18 @@ module FFI
 				)
 			end
 			
+			# FFI struct representing a string set returned by libclang.
+			# @private
+			class CXStringSet < FFI::Struct
+				layout(
+					:strings, :pointer,
+					:count, :uint
+				)
+			end
+			
 			attach_function :get_string, :clang_getCString, [CXString.by_value], :string
 			attach_function :dispose_string, :clang_disposeString, [CXString.by_value], :void
+			attach_function :dispose_string_set, :clang_disposeStringSet, [CXStringSet.by_ref], :void
 			
 			# Extract a Ruby string from a CXString and dispose of the CXString.
 			# @parameter cxstring [CXString] The CXString to extract from.

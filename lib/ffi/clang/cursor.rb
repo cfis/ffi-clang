@@ -19,6 +19,7 @@ require_relative "lib/code_completion"
 
 require_relative "overridden_cursors"
 require_relative "printing_policy"
+require_relative "string_set"
 require_relative "source_location"
 require_relative "source_range"
 require_relative "comment"
@@ -895,6 +896,12 @@ module FFI
 			# @returns [String] The mangled name.
 			def mangling
 				Lib.extract_string Lib.cursor_get_mangling(@cursor)
+			end
+			
+			# Get the C++ mangled symbols for a constructor or destructor cursor.
+			# @returns [StringSet] The mangled symbols.
+			def cxx_manglings
+				StringSet.new(Lib.cursor_get_cxx_manglings(@cursor))
 			end
 			
 			# Get the offset of a field in a record, in bits.

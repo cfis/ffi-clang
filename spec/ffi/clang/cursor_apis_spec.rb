@@ -154,6 +154,57 @@ describe FFI::Clang::Cursor do
 			expect(mangled).not_to be_empty
 		end
 	end
+	
+	describe "#cxx_manglings" do
+		let(:translation_unit) {Index.new.parse_translation_unit(fixture_path("manglings.cpp"), ["-std=c++17"])}
+		let(:cursor) {translation_unit.cursor}
+		let(:normal_translation_unit) {Index.new.parse_translation_unit(fixture_path("cursor_apis.cpp"), ["-std=c++17"])}
+		let(:normal_cursor) {normal_translation_unit.cursor}
+		
+		let(:constructor) do
+			find_matching(cursor) do |child, parent|
+				child.kind == :cursor_constructor and parent.spelling == "Widget"
+			end
+		end
+		
+		let(:destructor) do
+			find_matching(cursor) do |child, parent|
+				child.kind == :cursor_destructor and parent.spelling == "Widget"
+			end
+		end
+		
+		let(:visible_func) do
+			find_matching(normal_cursor) do |child, parent|
+				child.kind == :cursor_function and child.spelling == "visible_func"
+			end
+		end
+		
+		it "returns mangled symbols for constructors" do
+			manglings = constructor.cxx_manglings
+			
+			expect(manglings).to be_kind_of(StringSet)
+			expect(manglings.to_a).not_to be_empty
+			expect(manglings.to_a).to include(constructor.mangling)
+			expect(manglings.to_a).to all(be_kind_of(String))
+			expect(manglings.to_a).to all(satisfy {|mangling| !mangling.empty?})
+		end
+		
+		it "returns mangled symbols for destructors" do
+			manglings = destructor.cxx_manglings
+			
+			expect(manglings).to be_kind_of(StringSet)
+			expect(manglings.to_a).not_to be_empty
+			expect(manglings.to_a).to include(destructor.mangling)
+		end
+		
+		it "returns an empty string set for non-constructor cursors" do
+			manglings = visible_func.cxx_manglings
+			
+			expect(manglings).to be_kind_of(StringSet)
+			expect(manglings.size).to eq(0)
+			expect(manglings.to_a).to eq([])
+		end
+	end
 end
 
 describe FFI::Clang::Types::Type do
