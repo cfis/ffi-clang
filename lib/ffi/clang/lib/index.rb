@@ -11,9 +11,19 @@ module FFI
 		module Lib
 			typedef :pointer, :CXIndex
 			
+			GlobalOptFlags = enum [
+				:none, 0x0,
+				:thread_background_priority_for_indexing, 0x1,
+				:thread_background_priority_for_editing, 0x2,
+				:thread_background_priority_for_all, 0x3
+			]
+			
 			# Source code index:
 			attach_function :create_index, :clang_createIndex, [:int, :int], :CXIndex
 			attach_function :dispose_index, :clang_disposeIndex, [:CXIndex], :void
+			attach_function :set_global_options, :clang_CXIndex_setGlobalOptions, [:CXIndex, :uint], :void
+			attach_function :get_global_options, :clang_CXIndex_getGlobalOptions, [:CXIndex], :uint
+			attach_function :set_invocation_emission_path_option, :clang_CXIndex_setInvocationEmissionPathOption, [:CXIndex, :string], :void
 			
 			if Clang.clang_version >= Gem::Version.new("17.0.0")
 				CXChoice = enum(FFI::Type::UINT8, [
@@ -59,6 +69,19 @@ module FFI
 					def initialize(*args)
 						super
 						self[:size] = self.class.size
+						@string_fields = {}
+					end
+					
+					# Set the indexing background thread priority policy.
+					# @parameter value [Symbol] The CXChoice value.
+					def thread_background_priority_for_indexing=(value)
+						self[:thread_background_priority_for_indexing] = value
+					end
+					
+					# Set the editing background thread priority policy.
+					# @parameter value [Symbol] The CXChoice value.
+					def thread_background_priority_for_editing=(value)
+						self[:thread_background_priority_for_editing] = value
 					end
 					
 					# Set whether to exclude declarations from PCH.
@@ -79,6 +102,18 @@ module FFI
 						set_bitfield(2, value)
 					end
 					
+					# Set the preamble storage path.
+					# @parameter value [String | Nil] The directory path.
+					def preamble_storage_path=(value)
+						store_string(:preamble_storage_path, value)
+					end
+					
+					# Set the invocation emission path.
+					# @parameter value [String | Nil] The directory path.
+					def invocation_emission_path=(value)
+						store_string(:invocation_emission_path, value)
+					end
+					
 					private
 					
 					# Set a single bit in the bitfields.
@@ -89,6 +124,19 @@ module FFI
 							self[:bitfields] |= (1 << bit)
 						else
 							self[:bitfields] &= ~(1 << bit)
+						end
+					end
+					
+					# Keep backing string memory alive for pointer fields.
+					# @parameter field [Symbol] The struct field.
+					# @parameter value [String | Nil] The string value.
+					def store_string(field, value)
+						if value
+							@string_fields[field] = MemoryPointer.from_string(value)
+							self[field] = @string_fields[field]
+						else
+							@string_fields.delete(field)
+							self[field] = nil
 						end
 					end
 				end
