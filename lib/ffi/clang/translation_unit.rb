@@ -76,11 +76,18 @@ module FFI
 			
 			# Reparse the translation unit with updated file contents.
 			# @parameter unsaved [Array(UnsavedFile)] Unsaved file buffers.
-			# @parameter opts [Hash] Reparse options.
+			# @parameter opts [Array(Symbol) | Nil] Reparse options, or `nil` for libclang defaults.
 			# @raises [Error] If reparsing fails.
-			def reparse(unsaved = [], opts = {})
+			def reparse(unsaved = [], opts = nil)
 				unsaved_files = UnsavedFile.unsaved_pointer_from(unsaved)
-				if Lib.reparse_translation_unit(self, unsaved.size, unsaved_files, 0) != 0
+				option_bitmask =
+					if opts.nil?
+						Lib.default_reparse_options(self)
+					else
+						Lib.bitmask_from(Lib::ReparseFlags, opts)
+					end
+				
+				if Lib.reparse_translation_unit(self, unsaved.size, unsaved_files, option_bitmask) != 0
 					raise Error, "reparse error"
 				end
 			end
