@@ -155,6 +155,78 @@ describe FFI::Clang::Cursor do
 		end
 	end
 	
+	describe "#var_decl_initializer" do
+		let(:initialized_var) do
+			find_matching(cursor) do |child, parent|
+				child.kind == :cursor_variable and child.spelling == "initialized_var"
+			end
+		end
+		
+		let(:uninitialized_var) do
+			find_matching(cursor) do |child, parent|
+				child.kind == :cursor_variable and child.spelling == "uninitialized_var"
+			end
+		end
+		
+		it "returns the initializer cursor for an initialized variable" do
+			init = initialized_var.var_decl_initializer
+			expect(init).to be_kind_of(FFI::Clang::Cursor)
+			expect(init.kind).not_to eq(:cursor_invalid_file)
+		end
+		
+		it "returns a null cursor for an uninitialized variable" do
+			init = uninitialized_var.var_decl_initializer
+			expect(init.null?).to be true
+		end
+	end
+	
+	describe "#external_symbol" do
+		it "returns nil for non-external symbols" do
+			func = find_matching(cursor) do |child, parent|
+				child.kind == :cursor_function and child.spelling == "visible_func"
+			end
+			expect(func.external_symbol).to be_nil
+		end
+	end
+	
+	describe "#reference_name_range" do
+		it "returns a source range" do
+			func = find_matching(cursor) do |child, parent|
+				child.kind == :cursor_function and child.spelling == "visible_func"
+			end
+			range = func.reference_name_range
+			expect(range).to be_kind_of(FFI::Clang::SourceRange)
+		end
+		
+		it "accepts name flags" do
+			func = find_matching(cursor) do |child, parent|
+				child.kind == :cursor_function and child.spelling == "visible_func"
+			end
+			range = func.reference_name_range([:want_qualifier, :want_single_piece])
+			expect(range).to be_kind_of(FFI::Clang::SourceRange)
+		end
+	end
+	
+	describe "#offset_of_base" do
+		let(:derived) do
+			find_matching(cursor) do |child, parent|
+				child.kind == :cursor_struct and child.spelling == "Derived"
+			end
+		end
+		
+		it "returns the bit offset of a base class" do
+			skip unless FFI::Clang.clang_version >= Gem::Version.new("21.0.0")
+			bases = []
+			derived.type.visit_base_classes do |base|
+				bases << base
+			end
+			
+			expect(bases.length).to eq(2)
+			offset = derived.offset_of_base(bases.first)
+			expect(offset).to be >= 0
+		end
+	end
+	
 	describe "#cxx_manglings" do
 		let(:translation_unit) {Index.new.parse_translation_unit(fixture_path("manglings.cpp"), ["-std=c++17"])}
 		let(:cursor) {translation_unit.cursor}

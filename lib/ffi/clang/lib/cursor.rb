@@ -540,6 +540,12 @@ module FFI
 			
 			callback :visit_fields_callback, [CXCursor.by_value, :pointer], :uint
 			attach_function :type_visit_fields, :clang_Type_visitFields, [CXType.by_value, :visit_fields_callback, :pointer], :uint
+
+			if Clang.clang_version >= Gem::Version.new("21.0.0")
+				attach_function :visit_cxx_base_classes, :clang_visitCXXBaseClasses, [CXType.by_value, :visit_fields_callback, :pointer], :uint
+				attach_function :visit_cxx_methods, :clang_visitCXXMethods, [CXType.by_value, :visit_fields_callback, :pointer], :uint
+				attach_function :get_offset_of_base, :clang_getOffsetOfBase, [CXCursor.by_value, CXCursor.by_value], :long_long
+			end
 			
 			enum :result, [:success, :invalid, :visit_break]
 			attach_function :find_references_in_file, :clang_findReferencesInFile, [CXCursor.by_value, :CXFile, CXCursorAndRangeVisitor.by_value], :result
@@ -628,9 +634,18 @@ module FFI
 			attach_function :cursor_is_inline_namespace, :clang_Cursor_isInlineNamespace, [CXCursor.by_value], :uint
 			attach_function :cursor_get_mangling, :clang_Cursor_getMangling, [CXCursor.by_value], CXString.by_value
 			attach_function :cursor_get_cxx_manglings, :clang_Cursor_getCXXManglings, [CXCursor.by_value], CXStringSet.by_ref
+			attach_function :cursor_get_var_decl_initializer, :clang_Cursor_getVarDeclInitializer, [CXCursor.by_value], CXCursor.by_value
+			attach_function :cursor_is_external_symbol, :clang_Cursor_isExternalSymbol, [CXCursor.by_value, CXString.by_ref, CXString.by_ref, :pointer], :uint
+			attach_function :get_cursor_reference_name_range, :clang_getCursorReferenceNameRange, [CXCursor.by_value, :uint, :uint], CXSourceRange.by_value
 			attach_function :cursor_get_offset_of_field, :clang_Cursor_getOffsetOfField, [CXCursor.by_value], :long_long
 			attach_function :cursor_get_brief_comment_text, :clang_Cursor_getBriefCommentText, [CXCursor.by_value], CXString.by_value
 			attach_function :cursor_get_spelling_name_range, :clang_Cursor_getSpellingNameRange, [CXCursor.by_value, :uint, :uint], CXSourceRange.by_value
+			
+			NameRefFlags = enum [
+				:want_qualifier, 0x1,
+				:want_template_args, 0x2,
+				:want_single_piece, 0x4
+			]
 			
 			if Clang.clang_version >= Gem::Version.new("16.0.0")
 				attach_function :get_unqualified_type, :clang_getUnqualifiedType, [CXType.by_value], CXType.by_value

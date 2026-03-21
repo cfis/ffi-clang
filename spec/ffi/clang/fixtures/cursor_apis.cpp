@@ -37,6 +37,25 @@ namespace MyNamespace {
   };
 }
 
+// Variable with initializer
+int initialized_var = 100;
+int uninitialized_var;
+
+// C++ class with inheritance for visit_base_classes and offset_of_base
+struct Base1 {
+  int base1_val;
+};
+
+struct Base2 {
+  double base2_val;
+};
+
+struct Derived : public Base1, public Base2 {
+  char derived_val;
+  void derived_method() {}
+  int another_method() { return 0; }
+};
+
 // Function-like macro (will appear as macro_definition cursor)
 #define FUNC_MACRO(x) ((x) * 2)
 #define CONST_MACRO 42

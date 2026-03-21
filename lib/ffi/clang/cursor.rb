@@ -31,6 +31,31 @@ module FFI
 		class Cursor
 			include Enumerable
 			
+			# Represents an external source symbol attribute on a declaration.
+			class ExternalSymbol
+				# @attribute [r] language
+				# 	@returns [String] The source language.
+				# @attribute [r] defined_in
+				# 	@returns [String] Where the symbol is defined.
+				attr_reader :language, :defined_in
+				
+				# Build an external symbol from its attribute fields.
+				# @parameter language [String] The source language.
+				# @parameter defined_in [String] Where the symbol is defined.
+				# @parameter generated [Boolean] Whether this is a generated declaration.
+				def initialize(language, defined_in, generated)
+					@language = language
+					@defined_in = defined_in
+					@generated = generated
+				end
+				
+				# Check if this is a generated declaration.
+				# @returns [Boolean] True if the declaration is generated.
+				def generated?
+					@generated
+				end
+			end
+			
 			# @attribute [FFI::Lib::CXCursor] The underlying libclang cursor structure.
 			attr_reader :cursor
 			
@@ -904,6 +929,45 @@ module FFI
 			# @returns [StringSet] The mangled symbols.
 			def cxx_manglings
 				StringSet.new(Lib.cursor_get_cxx_manglings(@cursor))
+			end
+			
+			# Get the initializer expression of a variable declaration.
+			# @returns [Cursor] The initializer cursor, or a null cursor if none.
+			def var_decl_initializer
+				Cursor.new(Lib.cursor_get_var_decl_initializer(@cursor), @translation_unit)
+			end
+			
+			# Check if this cursor points to a symbol marked with the external_source_symbol attribute.
+			# @returns [ExternalSymbol | Nil] The external symbol info, or nil if not an external symbol.
+			def external_symbol
+				language_str = Lib::CXString.new
+				defined_in_str = Lib::CXString.new
+				is_generated_ptr = MemoryPointer.new(:uint)
+				
+				result = Lib.cursor_is_external_symbol(@cursor, language_str, defined_in_str, is_generated_ptr)
+				return nil if result == 0
+				
+				ExternalSymbol.new(
+					Lib.extract_string(language_str),
+					Lib.extract_string(defined_in_str),
+					is_generated_ptr.read_uint != 0
+				)
+			end
+			
+			# Get the source range of a reference name piece.
+			# @parameter name_flags [Array(Symbol)] Flags from NameRefFlags (:want_qualifier, :want_template_args, :want_single_piece).
+			# @parameter piece_index [Integer] The piece index (0 for contiguous names or when using :want_single_piece).
+			# @returns [SourceRange] The source range for the name piece.
+			def reference_name_range(name_flags = [], piece_index = 0)
+				flags = Lib.bitmask_from(Lib::NameRefFlags, name_flags)
+				SourceRange.new(Lib.get_cursor_reference_name_range(@cursor, flags, piece_index))
+			end
+			
+			# Get the bit offset of a base class in a record layout.
+			# @parameter base [Cursor] The base class specifier cursor.
+			# @returns [Integer] The bit offset, or a negative CXTypeLayoutError value on error.
+			def offset_of_base(base)
+				Lib.get_offset_of_base(@cursor, base.cursor)
 			end
 			
 			# Get the offset of a field in a record, in bits.
